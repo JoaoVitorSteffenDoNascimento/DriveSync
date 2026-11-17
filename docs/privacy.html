@@ -8,27 +8,32 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@118,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="studio-grid-bg" aria-hidden="true"></div>
-
     <header class="topbar">
-      <div class="container topbar-inner">
-        <a class="brand" href="index.html">
-          <img class="brand-mark" src="assets/icon.svg" alt="" width="30" height="30" />
-          <span>DriveSync</span>
+      <div class="topbar-left">
+        <a class="brand-cell" href="index.html">
+          <img src="assets/icon.svg" alt="" width="24" height="24" />
         </a>
-        <a class="btn" href="index.html">Voltar aos downloads</a>
+        <nav class="nav-items">
+          <a class="hud nav-link" href="index.html">Home</a>
+          <a class="hud nav-pill-active" href="privacy.html">Privacidade</a>
+          <a class="hud nav-link" href="terms.html">Termos</a>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <a class="hud cta-cell" href="index.html">Voltar aos Downloads</a>
       </div>
     </header>
 
-    <main class="container doc-page">
-      <h1>Política de Privacidade</h1>
-      <div class="doc-card">
+    <main class="doc-wrap">
+      <div class="doc-box">
+        <span class="hud" style="color: var(--accent-ink)">TRANSPARÊNCIA · PRIVACIDADE</span>
+        <h1>Política de Privacidade — DriveSync</h1>
         <p><strong>Última atualização:</strong> 17 de novembro de 2026</p>
         <p>
           O <strong>DriveSync</strong> é um aplicativo de código aberto executado localmente no
@@ -43,13 +48,13 @@
         </p>
         <ul>
           <li>Listar e exibir suas pastas e pastas compartilhadas no seletor do aplicativo;</li>
-          <li>Baixar e enviar arquivos das pastas que você conectar explicitamente;</li>
+          <li>Baixar e enviar arquivos das pastas conectadas explicitamente por você;</li>
           <li>
-            Ler metadados de autor/remetente (<code>owners</code>, <code>lastModifyingUser</code>,
-            <code>sharingUser</code>) para aplicar filtros no modo Drive Master;
+            Ler metadados de remetente/autor (<code>owners</code>, <code>lastModifyingUser</code>,
+            <code>sharingUser</code>) para aplicar os filtros no modo Drive Master;
           </li>
           <li>
-            Gravar e ler registros de dispositivos conectados e códigos de convite na pasta
+            Gravar e ler registros simples de dispositivos conectados e códigos de convite na pasta
             sincronizada (<code>.drivesync/</code> e propriedades da pasta).
           </li>
         </ul>
@@ -58,24 +63,18 @@
         <ul>
           <li>
             <strong>Sem servidores intermediários:</strong> o DriveSync comunica-se diretamente do
-            seu aparelho com a API oficial do Google Drive. Nenhum arquivo ou token passa por
-            servidores de terceiros.
+            seu aparelho com a API oficial do Google Drive.
           </li>
           <li>
             <strong>Tokens locais:</strong> suas credenciais OAuth ficam armazenadas localmente no
-            seu computador ou celular.
-          </li>
-          <li>
-            <strong>Exclusão e trava de 4 GiB:</strong> todas as políticas de segurança rodam no seu
-            próprio dispositivo.
+            seu dispositivo.
           </li>
         </ul>
 
         <h2>3. Revogação e contato</h2>
         <p>
-          Você pode desconectar sua conta dentro do app (Configurações → Desconectar) ou revogar o
-          acesso a qualquer momento em
-          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" style="color: var(--craft-accent-bright)">Permissões da Conta Google</a>.
+          Você pode desconectar sua conta dentro do app ou em
+          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">Permissões da Conta Google</a>.
         </p>
         <p>Contato: <code>joaovitorsteffendonascimento@gmail.com</code></p>
       </div>

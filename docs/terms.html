@@ -8,27 +8,32 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@118,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="studio-grid-bg" aria-hidden="true"></div>
-
     <header class="topbar">
-      <div class="container topbar-inner">
-        <a class="brand" href="index.html">
-          <img class="brand-mark" src="assets/icon.svg" alt="" width="30" height="30" />
-          <span>DriveSync</span>
+      <div class="topbar-left">
+        <a class="brand-cell" href="index.html">
+          <img src="assets/icon.svg" alt="" width="24" height="24" />
         </a>
-        <a class="btn" href="index.html">Voltar aos downloads</a>
+        <nav class="nav-items">
+          <a class="hud nav-link" href="index.html">Home</a>
+          <a class="hud nav-link" href="privacy.html">Privacidade</a>
+          <a class="hud nav-pill-active" href="terms.html">Termos</a>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <a class="hud cta-cell" href="index.html">Voltar aos Downloads</a>
       </div>
     </header>
 
-    <main class="container doc-page">
-      <h1>Termos de Uso</h1>
-      <div class="doc-card">
+    <main class="doc-wrap">
+      <div class="doc-box">
+        <span class="hud" style="color: var(--accent-ink)">CONDIÇÕES · CÓDIGO ABERTO</span>
+        <h1>Termos de Uso — DriveSync</h1>
         <p><strong>Última atualização:</strong> 17 de novembro de 2026</p>
         <ol>
           <li>
@@ -45,9 +50,7 @@
             O software é fornecido "no estado em que se encontra" (<em>as is</em>), sem garantias
             expressas ou implícitas. Recomenda-se manter cópias de segurança de dados críticos.
           </li>
-          <li>
-            Para dúvidas ou suporte: <code>joaovitorsteffendonascimento@gmail.com</code>.
-          </li>
+          <li>Contato: <code>joaovitorsteffendonascimento@gmail.com</code>.</li>
         </ol>
       </div>
     </main>
