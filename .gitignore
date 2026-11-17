@@ -1,0 +1,19 @@
+# Hash gerado automaticamente pelo rclone bisync (--filters-file)
+config/*.md5
+
+# Variáveis de ambiente locais, logs e cache Python
+.env
+*.log
+__pycache__/
+*.pyc
+
+# Dependências e builds do monorepo (Desktop, Engine e Mobile)
+node_modules/
+dist/
+dist-electron/
+release/
+apps/engine/bin/
+apps/desktop/resources/bin/
+*.db
+*.db-shm
+*.db-wal

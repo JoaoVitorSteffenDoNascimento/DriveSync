@@ -1,0 +1,121 @@
+# Regras de exclusão nativas do Restic (--exclude-file)
+# O Restic não interpreta prefixos `- ` / `+ **` do Rclone; este arquivo contém
+# padrões compatíveis com `restic backup --exclude-file`, combinados pelo
+# `scripts/run-restic.sh` com as regras `- ...` de `config/sync-filters.txt`.
+
+# Pastas de desenvolvimento, dependências e builds
+**/node_modules
+**/.git
+**/venv
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/dist
+**/build
+**/target
+**/.next
+**/.nuxt
+**/.turbo
+**/.parcel-cache
+**/.image-build
+**/.addon-cache
+
+# Artefato pesado específico identificado na auditoria de ~/Projetos (1,5 GB)
+/home/brendha/Projetos/boxmenu/measurement
+
+# Arquivos temporários e imagens/instaladores pesados
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+*.part
+*.crdownload
+*.iso
+*.img
+*.qcow2
+*.vdi
+*.vmdk
+*.ova
+*.pkg.tar.zst
+*.deb
+*.AppImage
+
+# Caches pesados dentro de ~/.config identificados na auditoria (~5,4 GB economizados)
+**/.config/Code/CachedExtensionVSIXs
+**/.config/Code/agent-host
+**/.config/Code/WebStorage
+**/.config/Code/Partitions
+**/.config/Code/CachedData
+**/.config/Code/Cache
+**/.config/Code/Code Cache
+**/.config/Code/GPUCache
+**/.config/Code/logs
+**/.config/Code/Crashpad
+
+**/.config/Code - OSS/CachedExtensionVSIXs
+**/.config/Code - OSS/Cache
+**/.config/Code - OSS/CachedData
+**/.config/Code - OSS/Code Cache
+**/.config/Code - OSS/GPUCache
+
+**/.config/Antigravity/Cache
+**/.config/Antigravity/CachedData
+**/.config/Antigravity/Code Cache
+**/.config/Antigravity/GPUCache
+**/.config/Antigravity/Partitions
+**/.config/Antigravity/WebStorage
+**/.config/Antigravity/logs
+**/.config/Antigravity/Crashpad
+
+**/.config/Codex/artifact-sessions
+**/.config/Codex/component_crx_cache
+**/.config/Codex/WasmTtsEngine
+**/.config/Codex/WidevineCdm
+**/.config/Codex/CertificateRevocation
+**/.config/Codex/OnDeviceHeadSuggestModel
+**/.config/Codex/Cache
+**/.config/Codex/Code Cache
+**/.config/Codex/GPUCache
+
+**/.config/chromium*/**/Cache
+**/.config/chromium*/**/Cache_Data
+**/.config/chromium*/**/Code Cache
+**/.config/chromium*/**/GPUCache
+**/.config/chromium*/**/Service Worker
+**/.config/chromium*/**/Dawn*Cache
+**/.config/chromium*/**/ShaderCache
+**/.config/chromium*/**/GrShaderCache
+**/.config/chromium*/**/IndexedDB
+**/.config/chromium*/**/blob_storage
+**/.config/chromium*/component_crx_cache
+**/.config/chromium*/extensions_crx_cache
+**/.config/chromium*/screen_ai
+**/.config/chromium*/WasmTtsEngine
+**/.config/chromium*/WidevineCdm
+**/.config/chromium*/Safe Browsing
+**/.config/chromium*/CertificateRevocation
+**/.config/chromium*/GPUPersistentCache
+**/.config/chromium*/OnDeviceHeadSuggestModel
+**/.config/chromium*/OptimizationGuidePredictionModels
+
+**/.config/mozilla/firefox/*/cache2
+**/.config/mozilla/firefox/*/storage/default/*/cache
+**/.config/mozilla/firefox/*/datareporting
+**/.config/mozilla/firefox/*/crashes
+
+# Caches genéricos de apps Electron / navegadores
+**/Cache
+**/Cache_Data
+**/Code Cache
+**/GPUCache
+**/DawnGraphiteCache
+**/DawnWebGPUCache
+**/CachedData
+**/Service Worker
+**/Crashpad
+**/blob_storage

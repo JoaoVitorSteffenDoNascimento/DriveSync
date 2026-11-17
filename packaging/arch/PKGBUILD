@@ -1,0 +1,38 @@
+# Maintainer: DriveSync Contributors
+pkgname=drivesync-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Sincronizador simples multiplataforma com Google Drive, Drive Master e trava de 4 GB"
+arch=('x86_64')
+url="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync"
+license=('MIT')
+depends=('electron' 'libnotify' 'nss')
+makedepends=('go' 'nodejs' 'npm')
+source=()
+
+build() {
+  cd "${startdir}/../.."
+  bash packaging/scripts/build-engine.sh linux
+  npm ci --workspaces --if-present || npm install
+  npm run build --workspace=@drivesync/shared
+  npm run build --workspace=@drivesync/desktop
+}
+
+package() {
+  cd "${startdir}/../.."
+  install -dm755 "${pkgdir}/usr/lib/drivesync/build"
+  cp -r apps/desktop/dist apps/desktop/dist-electron apps/desktop/package.json "${pkgdir}/usr/lib/drivesync/"
+  install -Dm644 apps/desktop/build/icon.png "${pkgdir}/usr/lib/drivesync/build/icon.png"
+  install -Dm755 apps/desktop/resources/bin/linux/drivesyncd "${pkgdir}/usr/lib/drivesync/bin/drivesyncd"
+
+  install -dm755 "${pkgdir}/usr/bin"
+  cat > "${pkgdir}/usr/bin/drivesync" <<'EOF'
+#!/usr/bin/env bash
+export DRIVESYNC_ENGINE_BIN="/usr/lib/drivesync/bin/drivesyncd"
+exec electron --ozone-platform-hint=auto --class=DriveSync /usr/lib/drivesync "$@"
+EOF
+  chmod 755 "${pkgdir}/usr/bin/drivesync"
+
+  install -Dm644 packaging/arch/drivesync.desktop "${pkgdir}/usr/share/applications/drivesync.desktop"
+  install -Dm644 apps/desktop/build/icon.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/drivesync.png"
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=DriveSync - Backup criptografado Restic para Google Drive
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=-%h/.config/nuvem-sync/env
+ExecStart=%h/Projetos/DriveSync/scripts/run-restic.sh
+Nice=15
+IOSchedulingClass=idle

@@ -1,0 +1,66 @@
+appId: com.drivesync.desktop
+productName: DriveSync
+copyright: Copyright © 2026 DriveSync
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+win:
+  icon: build/icon.png
+  extraResources:
+    - from: resources/bin/win
+      to: bin
+      filter:
+        - '**/*'
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: msi
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+linux:
+  icon: build/icon.png
+  extraResources:
+    - from: resources/bin/linux
+      to: bin
+      filter:
+        - '**/*'
+  category: Utility;Network;FileTransfer
+  maintainer: DriveSync <contato@drivesync.local>
+  synopsis: Sincronização simples com Google Drive e Drive Master
+  description: >
+    App simples multiplataforma para sincronizar pastas locais com o Google Drive,
+    com suporte a múltiplos dispositivos, modo Drive Master com filtro de remetentes
+    e limitação de até 4 GB por upload.
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+    - target: rpm
+      arch:
+        - x64
+    - target: pacman
+      arch:
+        - x64
+deb:
+  depends:
+    - libnotify4
+    - libnss3
+    - libxss1
+rpm:
+  depends:
+    - libnotify
+    - nss

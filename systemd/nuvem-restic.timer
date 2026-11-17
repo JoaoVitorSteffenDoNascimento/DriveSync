@@ -1,0 +1,11 @@
+[Unit]
+Description=DriveSync - Timer de backup diário Restic (noite, persistente)
+
+[Timer]
+OnCalendar=*-*-* 22:30:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=nuvem-restic.service
+
+[Install]
+WantedBy=timers.target

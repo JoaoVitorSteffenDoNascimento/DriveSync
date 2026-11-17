@@ -1,0 +1,9 @@
+{
+  "name": "@drivesync/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Parte 2: App Mobile (Android primeiro, iOS depois) compartilhando @drivesync/shared",
+  "dependencies": {
+    "@drivesync/shared": "*"
+  }
+}

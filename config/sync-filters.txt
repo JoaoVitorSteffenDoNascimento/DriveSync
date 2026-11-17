@@ -1,0 +1,58 @@
+# Regras de filtragem para Rclone Bisync (--filters-file)
+# ATENÇÃO: Alterar este arquivo exige rodar `rclone bisync ... --resync` antes do próximo sync normal.
+# Baseado na auditoria não-destrutiva de $HOME (Arch Linux).
+
+# Dependências e controle de versão
+- node_modules/**
+- .git/**
+- venv/**
+- .venv/**
+- __pycache__/**
+- .pytest_cache/**
+- .mypy_cache/**
+- .ruff_cache/**
+
+# Artefatos de build e frameworks
+- dist/**
+- build/**
+- target/**
+- .next/**
+- .nuxt/**
+- .turbo/**
+- .parcel-cache/**
+- .image-build/**
+- .addon-cache/**
+
+# Arquivos temporários e de sistema
+- *.tmp
+- *.swp
+- *.swo
+- *~
+- .DS_Store
+- Thumbs.db
+- desktop.ini
+- *.part
+- *.crdownload
+
+# Imagens de disco, VMs e instaladores pesados identificados na auditoria (ex.: ~/Downloads e ~/Projetos/boxmenu)
+- *.iso
+- *.img
+- *.qcow2
+- *.vdi
+- *.vmdk
+- *.ova
+- *.pkg.tar.zst
+- *.deb
+- *.AppImage
+
+# Lixeira e caches internos caso apareçam dentro da árvore sincronizada
+- .Trash-*/**
+- Cache/**
+- Code Cache/**
+- GPUCache/**
+- CachedData/**
+- CachedExtensionVSIXs/**
+- Service Worker/**
+
+# Incluir todo o restante
++ **

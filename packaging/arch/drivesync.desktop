@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DriveSync
+GenericName=Sincronizador Google Drive
+Comment=Sincronização simples com Google Drive, modo Master e trava de 4 GB
+Exec=/usr/bin/drivesync %U
+Icon=drivesync
+Terminal=false
+Categories=Network;FileTransfer;Utility;
+StartupNotify=true
