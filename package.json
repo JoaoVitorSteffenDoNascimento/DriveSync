@@ -13,7 +13,7 @@
     "dev": "npm run dev --workspace=@drivesync/desktop",
     "dev:mobile": "npm run dev --workspace=@drivesync/mobile",
     "build": "npm run build --workspace=@drivesync/shared && npm run build --workspace=@drivesync/desktop && npm run build --workspace=@drivesync/mobile",
-    "typecheck": "npm run typecheck --workspace=@drivesync/shared && npm run typecheck --workspace=@drivesync/desktop && npm run typecheck --workspace=@drivesync/mobile",
+    "typecheck": "npm run build --workspace=@drivesync/shared && npm run typecheck --workspace=@drivesync/shared && npm run typecheck --workspace=@drivesync/desktop && npm run typecheck --workspace=@drivesync/mobile",
     "test:shared": "npm run test --workspace=@drivesync/shared",
     "test:desktop": "npm run test --workspace=@drivesync/desktop",
     "test:mobile": "npm run test --workspace=@drivesync/mobile",
