@@ -45,7 +45,7 @@ class SyncRulesTest {
         assertTrue(SyncRules.shouldIgnoreRelativePath(".DriveSync-Quarentena/file.pdf"))
         assertTrue(SyncRules.shouldIgnoreRelativePath("projetos/.git/HEAD"))
         assertTrue(SyncRules.shouldIgnoreRelativePath("Downloads/aula.crdownload"))
-        assertTrue(SyncRules.shouldIgnoreRelativePath("~$trabalho.docx"))
+        assertTrue(SyncRules.shouldIgnoreRelativePath("~$" + "trabalho.docx"))
         assertFalse(SyncRules.shouldIgnoreRelativePath("Faculdade/Semestre1/prova.pdf"))
     }
 
