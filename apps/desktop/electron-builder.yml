@@ -1,6 +1,7 @@
 appId: com.drivesync.desktop
 productName: DriveSync
 copyright: Copyright © 2026 DriveSync
+electronVersion: 36.9.5
 directories:
   output: release
   buildResources: build
@@ -10,6 +11,7 @@ files:
   - package.json
 win:
   icon: build/icon.png
+  artifactName: DriveSync-Windows-x64.${ext}
   extraResources:
     - from: resources/bin/win
       to: bin
@@ -23,13 +25,17 @@ win:
       arch:
         - x64
 nsis:
+  artifactName: DriveSync-Setup-Windows-x64.exe
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+msi:
+  artifactName: DriveSync-Windows-x64.msi
 linux:
   icon: build/icon.png
+  artifactName: DriveSync-Linux-x64.${ext}
   extraResources:
     - from: resources/bin/linux
       to: bin
