@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DriveSync — Sincronização simples para Windows, Linux e Android</title>
+    <meta
+      name="description"
+      content="Sincronize pastas locais e compartilhadas com o Google Drive no Windows, Linux e Android — sem rclone, com filtro por remetente e trava de 4 GB."
+    />
+    <meta property="og:title" content="DriveSync — Windows, Linux e Android" />
+    <meta
+      property="og:description"
+      content="App nativo em Go e Kotlin para sincronizar seu Google Drive com filtro por remetente na Pasta Mestre e proteção contra exclusões."
+    />
+    <meta property="og:image" content="assets/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="studio-grid-bg" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <a class="brand" href="#topo">
+          <img class="brand-mark" src="assets/icon.svg" alt="" width="30" height="30" />
+          <span>DriveSync</span>
+          <span class="version-pill" data-release-version>v0.1.0</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Navegação principal">
+          <a href="#visual">Interface</a>
+          <a href="#baixar">Downloads</a>
+          <a href="#arquitetura">Recursos</a>
+          <a href="privacy.html">Privacidade</a>
+        </nav>
+
+        <a class="btn btn-solid" href="#baixar">Baixar app</a>
+      </div>
+    </header>
+
+    <main id="topo">
+      <section class="hero container">
+        <div class="hero-badge">
+          <span class="signal-dot" aria-hidden="true"></span>
+          <span>Motor nativo em Go e Kotlin para Windows, Linux e Android</span>
+        </div>
+
+        <h1>Sincronize seu Drive do seu jeito.</h1>
+
+        <p class="hero-sub">
+          Escolha qual pasta sincronizar no computador ou celular, filtre remetentes no Drive Master
+          e evite surpresas ao apagar arquivos — direto pela API oficial do Google Drive.
+        </p>
+
+        <div class="hero-actions">
+          <a id="hero-primary-cta" class="btn btn-accent btn-lg" href="#baixar">
+            Baixar para este dispositivo
+          </a>
+          <a class="btn btn-lg" href="#baixar">Ver todas as plataformas</a>
+        </div>
+
+        <div id="hero-detected-meta" class="hero-meta">
+          Detectando seu sistema para sugerir o instalador ideal...
+        </div>
+
+        <div id="visual" class="viewport-stage" aria-label="Prévia interativa do DriveSync">
+          <div class="viewport-chrome">
+            <div class="window-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+
+            <div class="viewport-tabs" role="tablist" aria-label="Modos de visualização do app">
+              <button
+                type="button"
+                class="viewport-tab"
+                role="tab"
+                aria-selected="true"
+                data-view-tab="desktop"
+              >
+                Desktop
+              </button>
+              <button
+                type="button"
+                class="viewport-tab"
+                role="tab"
+                aria-selected="false"
+                data-view-tab="master"
+              >
+                Drive Master
+              </button>
+              <button
+                type="button"
+                class="viewport-tab"
+                role="tab"
+                aria-selected="false"
+                data-view-tab="android"
+              >
+                Android
+              </button>
+            </div>
+
+            <span class="version-pill">API v3 Direta</span>
+          </div>
+
+          <div class="viewport-body">
+            <!-- Aba 1: Desktop -->
+            <div class="view-panel is-active" data-view-panel="desktop">
+              <div class="app-mock-shell">
+                <div class="app-mock-sidebar" aria-hidden="true">
+                  <div class="mock-nav-item active">
+                    <span>Minhas Pastas</span>
+                    <span>2</span>
+                  </div>
+                  <div class="mock-nav-item">
+                    <span>Dispositivos</span>
+                    <span>3</span>
+                  </div>
+                  <div class="mock-nav-item">
+                    <span>Bloqueios &amp; Logs</span>
+                    <span>1</span>
+                  </div>
+                  <div class="mock-nav-item">
+                    <span>Configurações</span>
+                  </div>
+                </div>
+
+                <div class="app-mock-main">
+                  <div class="mock-row-card">
+                    <div>
+                      <div class="mock-row-title">Documentos Pessoais</div>
+                      <div class="mock-row-sub">
+                        ~/Documentos ↔ Drive: Pessoal • Apagar no Drive: mantém no PC
+                      </div>
+                    </div>
+                    <span class="status-chip chip-ok">Sincronizado</span>
+                  </div>
+
+                  <div class="mock-row-card">
+                    <div>
+                      <div class="mock-row-title">Drive Master — Equipe</div>
+                      <div class="mock-row-sub">
+                        Recebendo de permitidos • Código DS1.1AbC...DS-A7K9-M2P4
+                      </div>
+                    </div>
+                    <span class="status-chip chip-info">3 dispositivos</span>
+                  </div>
+
+                  <div class="mock-row-card">
+                    <div>
+                      <div class="mock-row-title">VideoBackup_Raw_6GB.mkv</div>
+                      <div class="mock-row-sub">
+                        Arquivo acima do limite fixo de 4 GB bloqueado antes do envio
+                      </div>
+                    </div>
+                    <span class="status-chip chip-block">&gt; 4 GB barrado</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Aba 2: Drive Master -->
+            <div class="view-panel" data-view-panel="master">
+              <div class="app-mock-main">
+                <div class="mock-row-card">
+                  <div>
+                    <div class="mock-row-title">Política da Pasta Mestre: Filtro por Remetente</div>
+                    <div class="mock-row-sub">
+                      Você escolhe quem entra na sua máquina sem afetar os arquivos originais na nuvem.
+                    </div>
+                  </div>
+                  <span class="status-chip chip-info">Blocklist ativa</span>
+                </div>
+
+                <div class="mock-row-card">
+                  <div>
+                    <div class="mock-row-title">joao@gmail.com</div>
+                    <div class="mock-row-sub">Enviou relatorio-trimestre.pdf (14,2 MB)</div>
+                  </div>
+                  <span class="status-chip chip-ok">Baixado</span>
+                </div>
+
+                <div class="mock-row-card">
+                  <div>
+                    <div class="mock-row-title">luiz@gmail.com</div>
+                    <div class="mock-row-sub">Enviou backup-pesado.zip (1,8 GB)</div>
+                  </div>
+                  <span class="status-chip chip-block">Ignorado</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Aba 3: Android -->
+            <div class="view-panel" data-view-panel="android">
+              <div class="phone-preview-wrap">
+                <div class="phone-bezel" aria-hidden="true">
+                  <div class="phone-notch"></div>
+                  <div class="phone-card">
+                    <div class="mock-row-title">Drive Master Equipe</div>
+                    <div class="mock-row-sub">SAF: Downloads/Equipe • Em dia</div>
+                  </div>
+                  <div class="phone-card">
+                    <div class="mock-row-title">Celular Android</div>
+                    <div class="mock-row-sub">Sincronização Wi-Fi a cada 15 min</div>
+                  </div>
+                  <div class="phone-card">
+                    <div class="mock-row-title">PC Escritório + Notebook</div>
+                    <div class="mock-row-sub">Visíveis via .drivesync/devices/</div>
+                  </div>
+                  <div class="phone-bottom-bar">
+                    <span class="active">Pastas</span>
+                    <span>Pessoas</span>
+                    <span>Logs</span>
+                    <span>Ajustes</span>
+                  </div>
+                </div>
+
+                <div class="app-mock-main">
+                  <div class="mock-row-card">
+                    <div>
+                      <div class="mock-row-title">Pasta real do Android (SAF)</div>
+                      <div class="mock-row-sub">
+                        Escolha qualquer pasta pela janela nativa do sistema sem acesso root.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mock-row-card">
+                    <div>
+                      <div class="mock-row-title">Entrar por código ou link</div>
+                      <div class="mock-row-sub">
+                        Cole um link do Google Drive ou código curto como DS-A7K9-M2P4 para conectar.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="baixar" class="section container">
+        <div class="section-header">
+          <h2>Baixar instaladores</h2>
+          <p>
+            Escolha seu sistema para baixar diretamente os pacotes compilados na última release
+            pública do repositório.
+          </p>
+        </div>
+
+        <div class="workbench">
+          <div class="os-tabs" role="tablist" aria-label="Selecionar plataforma">
+            <button
+              type="button"
+              class="os-tab"
+              role="tab"
+              aria-selected="true"
+              data-os-tab="windows"
+            >
+              Windows 10 / 11
+            </button>
+            <button
+              type="button"
+              class="os-tab"
+              role="tab"
+              aria-selected="false"
+              data-os-tab="linux"
+            >
+              Linux
+            </button>
+            <button
+              type="button"
+              class="os-tab"
+              role="tab"
+              aria-selected="false"
+              data-os-tab="android"
+            >
+              Android (APK)
+            </button>
+          </div>
+
+          <!-- Windows Panel -->
+          <div class="os-panel is-active" data-os-panel="windows">
+            <div class="download-grid">
+              <div class="dl-card is-featured">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">Instalador Windows (.exe)</span>
+                    <span class="status-chip chip-info">Recomendado</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Instalador completo com interface Electron, motor nativo embutido e início na bandeja.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="win-exe">Arquitetura x64 • NSIS</div>
+                <a class="btn btn-accent" data-asset-link="win-exe" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar .exe (Windows)
+                </a>
+              </div>
+
+              <div class="dl-card">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">Pacote Corporativo (.msi)</span>
+                    <span class="version-pill">x64</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Instalador MSI padrão para implantação limpa no Windows 10 e Windows 11.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="win-msi">Windows Installer (.msi)</div>
+                <a class="btn" data-asset-link="win-msi" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar .msi
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linux Panel -->
+          <div class="os-panel" data-os-panel="linux">
+            <div class="download-grid">
+              <div class="dl-card is-featured">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">AppImage Universal</span>
+                    <span class="status-chip chip-info">Qualquer distro</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Executável único para X11 e Wayland com motor Go e integração opcional para Waybar.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="linux-appimage">x86_64 • AppImage</div>
+                <a class="btn btn-accent" data-asset-link="linux-appimage" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar .AppImage
+                </a>
+              </div>
+
+              <div class="dl-card">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">Ubuntu / Debian (.deb)</span>
+                    <span class="version-pill">amd64</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Instalação direta via <code>apt</code> ou duplo clique na loja de pacotes.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="linux-deb">Pacote .deb</div>
+                <a class="btn" data-asset-link="linux-deb" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar .deb
+                </a>
+              </div>
+
+              <div class="dl-card">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">Fedora / RHEL (.rpm)</span>
+                    <span class="version-pill">x86_64</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Pacote RPM compatível com DNF para Fedora e derivados.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="linux-rpm">Pacote .rpm</div>
+                <a class="btn" data-asset-link="linux-rpm" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar .rpm
+                </a>
+              </div>
+
+              <div class="dl-card">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">Arch Linux (.pacman)</span>
+                    <span class="version-pill">PKGBUILD</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Pacote pronto para pacman ou compilação local nativa usando o Electron do sistema.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="linux-pacman">Pacote .pacman</div>
+                <a class="btn" data-asset-link="linux-pacman" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar .pacman
+                </a>
+              </div>
+            </div>
+
+            <div class="code-snippet">
+              <code>cd packaging/arch &amp;&amp; makepkg -si</code>
+              <button type="button" class="btn" data-copy="cd packaging/arch && makepkg -si">
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <!-- Android Panel -->
+          <div class="os-panel" data-os-panel="android">
+            <div class="download-grid">
+              <div class="dl-card is-featured">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">DriveSync-Android.apk</span>
+                    <span class="status-chip chip-info">Android 7+</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    Aplicativo Android com seletor nativo de pastas (SAF), WorkManager em segundo plano e login Google.
+                  </p>
+                </div>
+                <div class="dl-card-meta" data-asset-meta="android-apk">APK Universal assinado</div>
+                <a class="btn btn-accent" data-asset-link="android-apk" href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases">
+                  Baixar APK para Android
+                </a>
+              </div>
+
+              <div class="dl-card">
+                <div>
+                  <div class="dl-card-head">
+                    <span class="dl-card-title">Como instalar o APK</span>
+                    <span class="version-pill">3 passos</span>
+                  </div>
+                  <p class="dl-card-desc">
+                    1. Toque no APK baixado. 2. Autorize “Instalar apps desconhecidos” para o navegador. 3. Entre com sua Conta Google e escolha uma pasta local.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="btn"
+                  data-copy="https://joaovitorsteffendonascimento.github.io/DriveSync/"
+                >
+                  Copiar link para enviar no celular
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="release-banner">
+            <span id="release-status-text">
+              Buscando informações da última release publicada no GitHub...
+            </span>
+            <a
+              class="btn"
+              href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver todas as releases
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="arquitetura" class="section container">
+        <div class="section-header">
+          <h2>Construído para uso real</h2>
+          <p>
+            Cada regra crítica roda localmente no motor nativo — sem intermediários e sem depender
+            do rclone no aplicativo.
+          </p>
+        </div>
+
+        <div class="bento-grid">
+          <article class="bento-card span-7">
+            <h3>Drive Master com filtro de remetentes</h3>
+            <p>
+              Em pastas compartilhadas por equipes ou turmas, escolha receber tudo, criar uma lista de
+              bloqueio ou restringir a uma lista de permitidos baseada no autor real do arquivo.
+            </p>
+            <div class="sender-demo">
+              <div class="sender-pill">
+                <span>joao@gmail.com</span>
+                <span class="status-chip chip-ok">Baixado automaticamente</span>
+              </div>
+              <div class="sender-pill">
+                <span>luiz@gmail.com</span>
+                <span class="status-chip chip-block">Barrado antes do download</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="bento-card span-5">
+            <h3>Trava fixa de 4 GB no upload</h3>
+            <p>
+              Todo arquivo acima de 4 GiB é detectado e bloqueado antes de abrir transmissão para
+              poupar banda e bateria no computador e no celular.
+            </p>
+            <div class="meter-bar" aria-hidden="true">
+              <div class="meter-safe"></div>
+              <div class="meter-cap"></div>
+            </div>
+            <div class="hero-meta" style="margin-top: 10px">
+              4.294.967.296 bytes (4 GiB) máximos por arquivo
+            </div>
+          </article>
+
+          <article class="bento-card span-4">
+            <h3>Mantém arquivos locais</h3>
+            <p>
+              Por padrão, apagar um arquivo no Google Drive não remove sua cópia local e não cria
+              loop de reenvio — ela só é enviada novamente se você editar o arquivo depois.
+            </p>
+          </article>
+
+          <article class="bento-card span-4">
+            <h3>Códigos de convite curtos</h3>
+            <p>
+              Gere códigos como <code>DS1.&lt;id&gt;.DS-A7K9-M2P4</code> ou cole o link da pasta do
+              Drive para conectar novos aparelhos em segundos.
+            </p>
+          </article>
+
+          <article class="bento-card span-4">
+            <h3>Dispositivos visíveis</h3>
+            <p>
+              Cada computador Linux, Windows e celular Android registra seu status em
+              <code>.drivesync/devices/</code> com transparência de modo e última atividade.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="brand">
+          <img class="brand-mark" src="assets/icon.svg" alt="" width="24" height="24" />
+          <span>DriveSync</span>
+        </div>
+
+        <div class="footer-links">
+          <a href="privacy.html">Política de Privacidade</a>
+          <a href="terms.html">Termos de Uso</a>
+          <a
+            href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub Releases
+          </a>
+          <a
+            href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Código-fonte
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

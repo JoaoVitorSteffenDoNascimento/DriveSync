@@ -137,6 +137,9 @@ func (c *GoogleDriveClient) doJSON(ctx context.Context, method, rawURL string, b
 	if resp.StatusCode == http.StatusForbidden {
 		return fmt.Errorf("%w: %s", ErrInsufficientAccess, string(respBytes))
 	}
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("%w: %s", ErrNotFound, string(respBytes))
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("drive API HTTP %d: %s", resp.StatusCode, string(respBytes))
 	}

@@ -12,6 +12,7 @@ var (
 	ErrNotAuthenticated   = errors.New("conta Google Drive não conectada")
 	ErrExceedsMaxUpload   = errors.New("arquivo ultrapassa o limite máximo de 4 GB por upload")
 	ErrInsufficientAccess = errors.New("sem permissão de escrita nesta pasta do Drive")
+	ErrNotFound           = errors.New("pasta ou arquivo não encontrado no Google Drive (ou sem compartilhamento para esta conta)")
 	ErrOAuthClientMissing = errors.New("credenciais OAuth do Google não configuradas")
 )
 

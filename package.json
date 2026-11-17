@@ -5,18 +5,21 @@
   "description": "DriveSync — Sincronização simples multiplataforma com Google Drive, modo Master, filtro de remetentes e trava de 4 GB",
   "workspaces": [
     "packages/*",
-    "apps/desktop"
+    "apps/desktop",
+    "apps/mobile"
   ],
   "scripts": {
     "build:engine": "bash packaging/scripts/build-engine.sh",
     "dev": "npm run dev --workspace=@drivesync/desktop",
-    "build": "npm run build --workspace=@drivesync/shared && npm run build --workspace=@drivesync/desktop",
-    "typecheck": "npm run typecheck --workspace=@drivesync/shared && npm run typecheck --workspace=@drivesync/desktop",
+    "dev:mobile": "npm run dev --workspace=@drivesync/mobile",
+    "build": "npm run build --workspace=@drivesync/shared && npm run build --workspace=@drivesync/desktop && npm run build --workspace=@drivesync/mobile",
+    "typecheck": "npm run typecheck --workspace=@drivesync/shared && npm run typecheck --workspace=@drivesync/desktop && npm run typecheck --workspace=@drivesync/mobile",
     "test:shared": "npm run test --workspace=@drivesync/shared",
     "test:desktop": "npm run test --workspace=@drivesync/desktop",
+    "test:mobile": "npm run test --workspace=@drivesync/mobile",
     "test:engine": "cd apps/engine && go test ./...",
     "test:legacy": "bash tests/validate-sync.sh --local",
-    "test": "npm run test:shared && npm run test:desktop && npm run test:engine && npm run test:legacy",
+    "test": "npm run test:shared && npm run test:desktop && npm run test:mobile && npm run test:engine && npm run test:legacy",
     "pack:linux": "bash packaging/scripts/build-engine.sh current && npm run build --workspace=@drivesync/shared && npm run pack:linux --workspace=@drivesync/desktop",
     "pack:win": "bash packaging/scripts/build-engine.sh windows && npm run build --workspace=@drivesync/shared && npm run pack:win --workspace=@drivesync/desktop",
     "install:linux": "bash packaging/scripts/install-local-linux.sh",

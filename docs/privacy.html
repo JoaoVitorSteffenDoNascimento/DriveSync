@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Política de Privacidade — DriveSync</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="studio-grid-bg" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <a class="brand" href="index.html">
+          <img class="brand-mark" src="assets/icon.svg" alt="" width="30" height="30" />
+          <span>DriveSync</span>
+        </a>
+        <a class="btn" href="index.html">Voltar aos downloads</a>
+      </div>
+    </header>
+
+    <main class="container doc-page">
+      <h1>Política de Privacidade</h1>
+      <div class="doc-card">
+        <p><strong>Última atualização:</strong> 17 de novembro de 2026</p>
+        <p>
+          O <strong>DriveSync</strong> é um aplicativo de código aberto executado localmente no
+          dispositivo do usuário para sincronizar pastas escolhidas pelo próprio usuário com o
+          Google Drive.
+        </p>
+
+        <h2>1. Dados acessados via Google Drive API</h2>
+        <p>
+          Ao autorizar o acesso com sua Conta Google, o DriveSync solicita acesso ao escopo da
+          Google Drive API (<code>https://www.googleapis.com/auth/drive</code>) exclusivamente para:
+        </p>
+        <ul>
+          <li>Listar e exibir suas pastas e pastas compartilhadas no seletor do aplicativo;</li>
+          <li>Baixar e enviar arquivos das pastas que você conectar explicitamente;</li>
+          <li>
+            Ler metadados de autor/remetente (<code>owners</code>, <code>lastModifyingUser</code>,
+            <code>sharingUser</code>) para aplicar filtros no modo Drive Master;
+          </li>
+          <li>
+            Gravar e ler registros de dispositivos conectados e códigos de convite na pasta
+            sincronizada (<code>.drivesync/</code> e propriedades da pasta).
+          </li>
+        </ul>
+
+        <h2>2. Armazenamento e segurança</h2>
+        <ul>
+          <li>
+            <strong>Sem servidores intermediários:</strong> o DriveSync comunica-se diretamente do
+            seu aparelho com a API oficial do Google Drive. Nenhum arquivo ou token passa por
+            servidores de terceiros.
+          </li>
+          <li>
+            <strong>Tokens locais:</strong> suas credenciais OAuth ficam armazenadas localmente no
+            seu computador ou celular.
+          </li>
+          <li>
+            <strong>Exclusão e trava de 4 GiB:</strong> todas as políticas de segurança rodam no seu
+            próprio dispositivo.
+          </li>
+        </ul>
+
+        <h2>3. Revogação e contato</h2>
+        <p>
+          Você pode desconectar sua conta dentro do app (Configurações → Desconectar) ou revogar o
+          acesso a qualquer momento em
+          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" style="color: var(--craft-accent-bright)">Permissões da Conta Google</a>.
+        </p>
+        <p>Contato: <code>joaovitorsteffendonascimento@gmail.com</code></p>
+      </div>
+    </main>
+  </body>
+</html>

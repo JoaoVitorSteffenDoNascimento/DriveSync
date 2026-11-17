@@ -239,6 +239,9 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 	remoteEntries, rootCanWrite, err := driveAPI.ListTree(ctx, folder.RemoteFolderID)
 	if err != nil {
 		msg := fmt.Sprintf("Erro ao listar pasta no Drive: %v", err)
+		if errors.Is(err, drive.ErrNotFound) {
+			msg = fmt.Sprintf("Pasta '%s' não encontrada ou ainda não compartilhada com '%s'. Peça ao dono da pasta para compartilhar diretamente com este e-mail no Google Drive.", folder.RemoteFolderName, account.Email)
+		}
 		s.recordError(folder, msg, settings)
 		return err
 	}

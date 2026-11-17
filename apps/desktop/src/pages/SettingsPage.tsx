@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { CheckCircle2, LogOut, ShieldCheck } from 'lucide-react';
+import { Check, CheckCircle2, Copy, ExternalLink, LogOut, Share2, ShieldCheck } from 'lucide-react';
 import type { AppSettings, DaemonSnapshot, RemoteDeletePolicy } from '@drivesync/shared';
 import { formatBytes } from '@drivesync/shared';
 import type { DaemonClient } from '../api/daemonClient';
+
+const DOWNLOAD_SITE_URL = 'https://joaovitorsteffendonascimento.github.io/DriveSync/';
+const RELEASES_URL = 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases';
 
 interface Props {
   client: DaemonClient;
@@ -20,6 +23,17 @@ export const SettingsPage: React.FC<Props> = ({
   const [form, setForm] = useState<AppSettings>(snapshot.settings);
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(DOWNLOAD_SITE_URL);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      setCopiedLink(false);
+    }
+  };
 
   const platform = window.driveSyncDesktop?.getPlatformInfo().platform ?? 'linux';
 
@@ -191,6 +205,57 @@ export const SettingsPage: React.FC<Props> = ({
           </button>
         </div>
       </form>
+
+      <div className="card">
+        <div className="row-inline" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <div className="row-inline" style={{ gap: 8 }}>
+              <Share2 size={17} color="var(--primary)" />
+              <strong style={{ fontSize: 15 }}>Compartilhar o DriveSync</strong>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 10px' }}>
+              Envie o link abaixo para outras pessoas baixarem o instalador do Windows (.exe / .msi),
+              Linux (.AppImage / .deb / .rpm / .pacman) ou Android (.apk):
+            </p>
+            <code
+              style={{
+                display: 'block',
+                fontSize: 12,
+                padding: '8px 10px',
+                borderRadius: 8,
+                background: 'var(--surface-muted)',
+                wordBreak: 'break-all',
+              }}
+            >
+              {DOWNLOAD_SITE_URL}
+            </code>
+          </div>
+        </div>
+        <div className="row-inline" style={{ marginTop: 12, gap: 8 }}>
+          <button type="button" className="btn btn-primary" onClick={handleCopyShareLink}>
+            {copiedLink ? <Check size={15} /> : <Copy size={15} />}
+            {copiedLink ? 'Link copiado!' : 'Copiar link de download'}
+          </button>
+          <a
+            className="btn"
+            href={DOWNLOAD_SITE_URL}
+            target="_blank"
+            rel="noreferrer"
+            style={{ textDecoration: 'none' }}
+          >
+            <ExternalLink size={15} /> Abrir site de downloads
+          </a>
+          <a
+            className="btn"
+            href={RELEASES_URL}
+            target="_blank"
+            rel="noreferrer"
+            style={{ textDecoration: 'none' }}
+          >
+            <ExternalLink size={15} /> GitHub Releases
+          </a>
+        </div>
+      </div>
     </div>
   );
 };

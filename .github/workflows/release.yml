@@ -1,0 +1,198 @@
+name: Release Multiplataforma
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag da release (ex.: v0.1.0)'
+        required: false
+        default: 'v0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Linux Installers (.AppImage, .deb, .rpm, .pacman)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm libarchive-tools zstd xz-utils
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/engine/go.mod
+          cache: true
+          cache-dependency-path: apps/engine/go.sum
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Go engine & Electron Linux packages
+        env:
+          DRIVESYNC_GOOGLE_CLIENT_ID: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_ID }}
+          DRIVESYNC_GOOGLE_CLIENT_SECRET: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_SECRET }}
+        run: |
+          bash packaging/scripts/build-engine.sh current
+          npm run build --workspace=@drivesync/shared
+          npm run build --workspace=@drivesync/desktop
+          cd apps/desktop
+          npx electron-builder --config electron-builder.yml --linux --publish never
+
+      - name: Upload Linux installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-linux
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.rpm
+            apps/desktop/release/*.pacman
+
+  build-windows:
+    name: Windows Installers (.exe & .msi)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/engine/go.mod
+          cache: true
+          cache-dependency-path: apps/engine/go.sum
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Go engine for Windows
+        shell: bash
+        env:
+          DRIVESYNC_GOOGLE_CLIENT_ID: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_ID }}
+          DRIVESYNC_GOOGLE_CLIENT_SECRET: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_SECRET }}
+        run: bash packaging/scripts/build-engine.sh windows
+
+      - name: Build Windows NSIS & MSI installers
+        shell: bash
+        run: |
+          npm run build --workspace=@drivesync/shared
+          npm run build --workspace=@drivesync/desktop
+          cd apps/desktop
+          npx electron-builder --config electron-builder.yml --win --publish never
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-windows
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.msi
+
+  build-android:
+    name: Android APK (DriveSync-Android.apk)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies & sync Capacitor
+        run: |
+          npm ci
+          npm run build --workspace=@drivesync/shared
+          npm run build --workspace=@drivesync/mobile
+          cd apps/mobile
+          npx cap sync android
+
+      - name: Run unit tests & build APK
+        env:
+          DRIVESYNC_GOOGLE_CLIENT_ID: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_ID }}
+          DRIVESYNC_GOOGLE_CLIENT_SECRET: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_SECRET }}
+        run: |
+          cd apps/mobile/android
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug
+
+      - name: Stage APK artifact
+        run: |
+          mkdir -p release-apk
+          cp apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk release-apk/DriveSync-Android.apk
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-android
+          path: release-apk/DriveSync-Android.apk
+
+  publish-release:
+    name: Publicar GitHub Release
+    needs: [build-linux, build-windows, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.tag_name || 'v0.1.0' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all platform installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-release
+
+      - name: Flatten release assets
+        run: |
+          mkdir -p upload-assets
+          find dist-release -type f -exec cp -v {} upload-assets/ \;
+          ls -la upload-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: DriveSync ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          make_latest: true
+          files: upload-assets/*

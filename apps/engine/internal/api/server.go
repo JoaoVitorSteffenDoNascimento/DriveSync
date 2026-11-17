@@ -435,7 +435,11 @@ func (s *Server) handleResolveCode(w http.ResponseWriter, r *http.Request) {
 		folderID, shortCode := m[1], strings.ToUpper(m[2])
 		meta, err := cli.GetFolderMeta(r.Context(), folderID)
 		if err != nil {
-			writeErr(w, http.StatusNotFound, "Não foi possível abrir essa pasta no seu Google Drive (verifique se o dono liberou acesso para você ou para o link): "+err.Error())
+			if errors.Is(err, drive.ErrNotFound) {
+				writeErr(w, http.StatusNotFound, fmt.Sprintf("Esta pasta ainda não aparece para a sua conta Google. Peça ao dono para compartilhar com o seu e-mail no Google Drive ou abra este link uma vez no navegador logado na sua conta: https://drive.google.com/drive/folders/%s", folderID))
+				return
+			}
+			writeErr(w, http.StatusNotFound, "Não foi possível abrir essa pasta no seu Google Drive: "+err.Error())
 			return
 		}
 		if meta.JoinCode != "" && !strings.EqualFold(meta.JoinCode, shortCode) {
@@ -459,6 +463,10 @@ func (s *Server) handleResolveCode(w http.ResponseWriter, r *http.Request) {
 		folderID := m[1]
 		meta, err := cli.GetFolderMeta(r.Context(), folderID)
 		if err != nil {
+			if errors.Is(err, drive.ErrNotFound) {
+				writeErr(w, http.StatusNotFound, fmt.Sprintf("Sua conta Google atual ainda não tem acesso a essa pasta. Peça ao dono para compartilhar diretamente com seu e-mail ou abra o link uma vez logado nesta conta: https://drive.google.com/drive/folders/%s", folderID))
+				return
+			}
 			writeErr(w, http.StatusNotFound, "Não foi possível acessar o link dessa pasta no Drive: "+err.Error())
 			return
 		}

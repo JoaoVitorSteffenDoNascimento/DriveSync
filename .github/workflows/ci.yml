@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-core:
+    name: Shared, Desktop, Go Engine & Legacy Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/engine/go.mod
+          cache: true
+          cache-dependency-path: apps/engine/go.sum
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck all workspaces
+        run: npm run typecheck
+
+      - name: Build Shared, Desktop & Mobile web bundles
+        run: npm run build
+
+      - name: Run unit and integration tests
+        run: npm test
+
+  test-android:
+    name: Android Kotlin Unit Tests & APK Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies and build web bundle
+        run: |
+          npm ci
+          npm run build --workspace=@drivesync/shared
+          npm run build --workspace=@drivesync/mobile
+          cd apps/mobile
+          npx cap sync android
+
+      - name: Run Kotlin unit tests and build APK
+        env:
+          DRIVESYNC_GOOGLE_CLIENT_ID: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_ID }}
+          DRIVESYNC_GOOGLE_CLIENT_SECRET: ${{ secrets.DRIVESYNC_GOOGLE_CLIENT_SECRET }}
+        run: |
+          cd apps/mobile/android
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug
+
+      - name: Prepare APK artifact
+        run: |
+          mkdir -p artifacts-apk
+          cp apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk artifacts-apk/DriveSync-Android.apk
+
+      - name: Upload preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriveSync-Android-preview
+          path: artifacts-apk/DriveSync-Android.apk
+          retention-days: 14
