@@ -1,5 +1,6 @@
 appId: com.drivesync.desktop
 productName: DriveSync
+executableName: drivesync
 copyright: Copyright © 2026 DriveSync
 electronVersion: 36.9.5
 directories:
