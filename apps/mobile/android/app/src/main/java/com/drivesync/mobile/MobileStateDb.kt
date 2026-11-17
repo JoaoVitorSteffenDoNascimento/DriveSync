@@ -446,7 +446,7 @@ class MobileStateDb(context: Context) :
         folderId: String,
         folderName: String,
         relativePath: String,
-        localPath: String,
+        localPath: String = "",
         fileSizeBytes: Long,
         authorEmail: String,
         authorName: String,
