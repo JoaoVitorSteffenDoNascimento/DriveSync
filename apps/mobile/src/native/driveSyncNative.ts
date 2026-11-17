@@ -1,10 +1,11 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import {
   MAX_UPLOAD_BYTES,
   type AccountInfo,
   type AppSettings,
   type CreateFolderInput,
   type DaemonSnapshot,
+  type FolderContentsResponse,
   type FolderInviteInfo,
   type ImportPathsResult,
   type RemoteFolderItem,
@@ -31,10 +32,14 @@ export interface DriveSyncNativePlugin {
   getSnapshot(): Promise<MobileSnapshot>;
   saveOAuthClient(options: { clientId: string; clientSecret: string }): Promise<AccountInfo>;
   uploadGoogleOAuthJson(options: { rawJson: string }): Promise<AccountInfo>;
+  pickAndLoadOAuthJson(): Promise<AccountInfo>;
   startGoogleOAuth(): Promise<AccountInfo>;
+  cancelGoogleOAuth(): Promise<{ ok: boolean }>;
   disconnectAccount(): Promise<{ ok: boolean }>;
   pickLocalFolder(): Promise<PickedMobileFolder>;
-  pickAndImportFiles(options: { folderId: string }): Promise<ImportPathsResult>;
+  pickAndImportFiles(options: { folderId: string; subpath?: string }): Promise<ImportPathsResult>;
+  listFolderContents(options: { folderId: string; subpath: string }): Promise<FolderContentsResponse>;
+  createSubfolder(options: { folderId: string; subpath: string; name: string }): Promise<{ ok: boolean }>;
   listDriveFolders(options: { parentId: string; shared: boolean }): Promise<{ items: RemoteFolderItem[] }>;
   createDriveFolder(options: { name: string; parentId: string }): Promise<RemoteFolderItem>;
   resolveFolderCode(options: { codeOrLink: string }): Promise<ResolvedFolderCode>;
@@ -43,8 +48,13 @@ export interface DriveSyncNativePlugin {
   createSyncFolder(options: { input: CreateFolderInput }): Promise<SyncFolderConfig>;
   updateSyncFolder(options: { folder: SyncFolderConfig }): Promise<SyncFolderConfig>;
   deleteSyncFolder(options: { folderId: string }): Promise<{ deleted: boolean }>;
+  forgetDevice(options: { folderId: string; deviceId: string }): Promise<{ ok: boolean }>;
   syncNow(options: { folderId: string }): Promise<{ started: boolean }>;
   updateSettings(options: { settings: MobileSettings }): Promise<MobileSettings>;
+  addListener?: (
+    eventName: 'authUrlReady',
+    listenerFunc: (data: { authUrl: string }) => void,
+  ) => Promise<PluginListenerHandle>;
 }
 
 const NativePlugin = registerPlugin<DriveSyncNativePlugin>('DriveSyncNative');
@@ -93,6 +103,10 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
         previewState.account.hasCustomOAuthClient = true;
         return previewState.account;
       },
+      async pickAndLoadOAuthJson() {
+        previewState.account.hasCustomOAuthClient = true;
+        return previewState.account;
+      },
       async startGoogleOAuth() {
         previewState.account = {
           connected: true,
@@ -102,6 +116,9 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
           hasCustomOAuthClient: true,
         };
         return previewState.account;
+      },
+      async cancelGoogleOAuth() {
+        return { ok: true };
       },
       async disconnectAccount() {
         previewState.account = {
@@ -118,6 +135,18 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       },
       async pickAndImportFiles() {
         return { addedCount: 0, skippedOver4GB: [], errors: [] };
+      },
+      async listFolderContents({ folderId, subpath }) {
+        return {
+          folderId,
+          folderName: 'Drive Master',
+          localPath: 'content://mock/DriveSync',
+          subpath,
+          items: [],
+        };
+      },
+      async createSubfolder() {
+        return { ok: true };
       },
       async listDriveFolders() {
         return { items: [] };
@@ -164,6 +193,12 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       async deleteSyncFolder({ folderId }) {
         previewState.folders = previewState.folders.filter((f) => f.id !== folderId);
         return { deleted: true };
+      },
+      async forgetDevice({ folderId, deviceId }) {
+        previewState.devices = previewState.devices.filter(
+          (d) => !(d.folderId === folderId && d.deviceId === deviceId),
+        );
+        return { ok: true };
       },
       async syncNow() {
         return { started: true };

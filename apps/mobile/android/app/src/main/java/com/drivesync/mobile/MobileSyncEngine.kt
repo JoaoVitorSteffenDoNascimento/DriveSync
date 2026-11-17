@@ -5,10 +5,14 @@ import android.net.Uri
 import android.os.Build
 import android.webkit.MimeTypeMap
 import androidx.documentfile.provider.DocumentFile
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStream
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 data class LocalSafFile(
     val relativePath: String,
@@ -43,22 +47,24 @@ class MobileSyncEngine(
         }
     }
 
-    fun importDocumentUris(folderId: String, uris: List<Uri>): Pair<Int, List<String>> {
+    fun importDocumentUris(folderId: String, subpath: String, uris: List<Uri>): Pair<Int, List<String>> {
         val folder = db.getFolder(folderId) ?: throw IllegalArgumentException("Pasta não encontrada.")
         val rootDoc = DocumentFile.fromTreeUri(context, Uri.parse(folder.localPath))
             ?: throw IllegalStateException("Pasta local no celular inacessível. Selecione novamente.")
+        val baseSegments = sanitizeSubpathSegments(subpath)
         var added = 0
         val skippedOver4Gb = mutableListOf<String>()
         for (srcUri in uris) {
             val srcDoc = DocumentFile.fromSingleUri(context, srcUri) ?: continue
             val name = srcDoc.name ?: "arquivo-${System.currentTimeMillis()}"
+            val relPath = (baseSegments + name).joinToString("/")
             val size = queryUriSize(srcUri, srcDoc.length())
             if (SyncRules.exceedsUploadLimit(size)) {
                 skippedOver4Gb.add(name)
                 db.recordBlockedFile(
                     folderId = folder.id,
                     folderName = folder.name,
-                    relativePath = name,
+                    relativePath = relPath,
                     localPath = srcUri.toString(),
                     fileSizeBytes = size,
                     authorEmail = db.getAccountInfo().email,
@@ -69,7 +75,7 @@ class MobileSyncEngine(
                 continue
             }
             val mime = srcDoc.type ?: guessMime(name)
-            val dest = createOrReplaceFile(rootDoc, listOf(name), mime)
+            val dest = createOrReplaceFile(rootDoc, baseSegments + name, mime)
                 ?: throw IllegalStateException("Não foi possível gravar $name na pasta escolhida.")
             context.contentResolver.openInputStream(srcUri)?.use { input ->
                 context.contentResolver.openOutputStream(dest.uri, "wt")?.use { out ->
@@ -85,6 +91,72 @@ class MobileSyncEngine(
         }
         return added to skippedOver4Gb
     }
+
+    fun listFolderContents(folderId: String, subpath: String): JSONObject {
+        val folder = db.getFolder(folderId) ?: throw IllegalArgumentException("Pasta não encontrada.")
+        val rootDoc = DocumentFile.fromTreeUri(context, Uri.parse(folder.localPath))
+            ?: throw IllegalStateException("Pasta local no celular inacessível.")
+        val segments = sanitizeSubpathSegments(subpath)
+        var current = rootDoc
+        for (seg in segments) {
+            current = current.findFile(seg)?.takeIf { it.isDirectory }
+                ?: throw IllegalArgumentException("Subpasta não encontrada: $seg")
+        }
+        val normalizedSubpath = segments.joinToString("/")
+        val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val items = current.listFiles()
+            .mapNotNull { child ->
+                val name = child.name ?: return@mapNotNull null
+                val rel = if (normalizedSubpath.isEmpty()) name else "$normalizedSubpath/$name"
+                if (SyncRules.shouldIgnoreRelativePath(rel)) return@mapNotNull null
+                val isDir = child.isDirectory
+                val size = if (isDir) 0L else queryUriSize(child.uri, child.length())
+                val mtime = child.lastModified()
+                Triple(isDir, name.lowercase(Locale.US), JSONObject().apply {
+                    put("name", name)
+                    put("relativePath", rel)
+                    put("isDir", isDir)
+                    put("sizeBytes", size)
+                    put("modifiedAt", if (mtime > 0) isoFmt.format(Date(mtime)) else "")
+                    put("exceeds4gb", !isDir && SyncRules.exceedsUploadLimit(size))
+                })
+            }
+            .sortedWith(compareBy<Triple<Boolean, String, JSONObject>>({ !it.first }, { it.second }))
+
+        val arr = JSONArray()
+        items.forEach { arr.put(it.third) }
+        return JSONObject().apply {
+            put("folderId", folder.id)
+            put("folderName", folder.name)
+            put("localPath", folder.localPath)
+            put("subpath", normalizedSubpath)
+            put("items", arr)
+        }
+    }
+
+    fun createSubfolder(folderId: String, subpath: String, name: String) {
+        val clean = name.trim()
+        require(clean.isNotEmpty() && !clean.contains('/') && !clean.contains('\\') && clean != "." && clean != "..") {
+            "Nome de subpasta inválido."
+        }
+        val folder = db.getFolder(folderId) ?: throw IllegalArgumentException("Pasta não encontrada.")
+        val rootDoc = DocumentFile.fromTreeUri(context, Uri.parse(folder.localPath))
+            ?: throw IllegalStateException("Pasta local no celular inacessível.")
+        var dir = rootDoc
+        for (seg in sanitizeSubpathSegments(subpath)) {
+            dir = findOrCreateChildDir(dir, seg)
+                ?: throw IllegalStateException("Falha ao acessar subpasta $seg.")
+        }
+        findOrCreateChildDir(dir, clean)
+            ?: throw IllegalStateException("Não foi possível criar a subpasta $clean.")
+    }
+
+    private fun sanitizeSubpathSegments(subpath: String): List<String> =
+        subpath.replace('\\', '/').split('/')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && it != "." && it != ".." }
 
     private fun syncFolderInternal(folder: SyncFolderConfig, account: AccountInfo) {
         val settings = db.getSettings()

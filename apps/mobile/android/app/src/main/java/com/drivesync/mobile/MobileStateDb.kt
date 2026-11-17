@@ -264,7 +264,7 @@ class MobileStateDb(context: Context) :
     @Synchronized
     fun getAccountInfo(): AccountInfo {
         val token = getToken()
-        val custom = getCustomOAuthClient()
+        val effective = getEffectiveOAuthClient()
         val rawProfile = getKv(KV_ACCOUNT_INFO)
         var email = ""
         var displayName = ""
@@ -281,7 +281,7 @@ class MobileStateDb(context: Context) :
             email = if (connected) email else "",
             displayName = if (connected) displayName else "",
             authSource = if (connected) "oauth_pkce" else "none",
-            hasCustomOAuthClient = custom != null
+            hasCustomOAuthClient = effective != null
         )
     }
 
@@ -363,6 +363,15 @@ class MobileStateDb(context: Context) :
         writableDatabase.delete("blocked_files", "folder_id = ?", arrayOf(folderId))
         writableDatabase.delete("devices", "folder_id = ?", arrayOf(folderId))
         liveRuntime.remove(folderId)
+    }
+
+    @Synchronized
+    fun forgetDevice(folderId: String, deviceId: String) {
+        writableDatabase.delete(
+            "devices",
+            "folder_id = ? AND device_id = ?",
+            arrayOf(folderId, deviceId)
+        )
     }
 
     @Synchronized

@@ -35,6 +35,9 @@ class DriveSyncPlugin : Plugin() {
     private lateinit var engine: MobileSyncEngine
     private val executor = Executors.newCachedThreadPool()
 
+    @Volatile
+    private var activeAuthServer: ServerSocket? = null
+
     override fun load() {
         db = MobileStateDb(context)
         api = DriveApiClient(db)
@@ -87,17 +90,61 @@ class DriveSyncPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun pickAndLoadOAuthJson(call: PluginCall) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+        }
+        startActivityForResult(call, intent, "onOAuthJsonPicked")
+    }
+
+    @ActivityCallback
+    private fun onOAuthJsonPicked(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        if (result.resultCode != Activity.RESULT_OK) {
+            call.reject("Seleção do arquivo JSON cancelada.")
+            return
+        }
+        val uri = result.data?.data
+        if (uri == null) {
+            call.reject("Nenhum arquivo selecionado.")
+            return
+        }
+        executor.execute {
+            runCatching {
+                val rawJson = context.contentResolver.openInputStream(uri)?.use {
+                    it.bufferedReader(StandardCharsets.UTF_8).readText()
+                }.orEmpty()
+                require(rawJson.isNotBlank()) { "Arquivo JSON vazio ou ilegível." }
+                val creds = SyncRules.parseGoogleCredentialsJson(rawJson)
+                db.saveCustomOAuthClient(creds)
+                toJSObject(db.getAccountInfo().toJson())
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Não foi possível ler o credentials.json.") }
+        }
+    }
+
+    @PluginMethod
+    fun cancelGoogleOAuth(call: PluginCall) {
+        runCatching { activeAuthServer?.close() }
+        activeAuthServer = null
+        call.resolve(JSObject().apply { put("ok", true) })
+    }
+
+    @PluginMethod
     fun startGoogleOAuth(call: PluginCall) {
         val creds = db.getEffectiveOAuthClient()
         if (creds == null || creds.clientId.isBlank()) {
-            call.reject("Configure primeiro o Client ID OAuth ou anexe o credentials.json.")
+            call.reject("Falta configurar o Client ID OAuth no app. Anexe o credentials.json, cole o conteúdo dele ou informe o Client ID abaixo.")
             return
         }
 
         executor.execute {
             var server: ServerSocket? = null
             try {
+                runCatching { activeAuthServer?.close() }
                 server = bindLoopbackSocket()
+                activeAuthServer = server
                 val port = server.localPort
                 val redirectUri = "http://127.0.0.1:$port/"
                 val state = randomUrlSafe(24)
@@ -125,6 +172,8 @@ class DriveSyncPlugin : Plugin() {
 
                 val authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
                     params.entries.joinToString("&") { (k, v) -> "${enc(k)}=${enc(v)}" }
+
+                notifyListeners("authUrlReady", JSObject().apply { put("authUrl", authUrl) })
 
                 val act = activity
                 if (act != null) {
@@ -213,6 +262,9 @@ class DriveSyncPlugin : Plugin() {
             } catch (ex: Exception) {
                 call.reject(ex.message ?: "Falha no login com Google.")
             } finally {
+                if (activeAuthServer === server) {
+                    activeAuthServer = null
+                }
                 runCatching { server?.close() }
             }
         }
@@ -287,6 +339,7 @@ class DriveSyncPlugin : Plugin() {
     private fun onImportFilesPicked(call: PluginCall?, result: ActivityResult) {
         if (call == null) return
         val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        val subpath = call.getString("subpath", "")?.trim().orEmpty()
         if (result.resultCode != Activity.RESULT_OK) {
             call.resolve(JSObject().apply {
                 put("addedCount", 0)
@@ -306,7 +359,7 @@ class DriveSyncPlugin : Plugin() {
         }
         executor.execute {
             runCatching {
-                val (added, skipped) = engine.importDocumentUris(folderId, uris)
+                val (added, skipped) = engine.importDocumentUris(folderId, subpath, uris)
                 if (added > 0) {
                     executor.execute { runCatching { engine.syncAllFolders(folderId) } }
                 }
@@ -317,6 +370,36 @@ class DriveSyncPlugin : Plugin() {
                 }
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Erro ao importar arquivos.") }
+        }
+    }
+
+    @PluginMethod
+    fun listFolderContents(call: PluginCall) {
+        val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        val subpath = call.getString("subpath", "")?.trim().orEmpty()
+        if (folderId.isBlank()) {
+            call.reject("Informe o ID da pasta sincronizada.")
+            return
+        }
+        executor.execute {
+            runCatching {
+                toJSObject(engine.listFolderContents(folderId, subpath))
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Erro ao listar arquivos da pasta local.") }
+        }
+    }
+
+    @PluginMethod
+    fun createSubfolder(call: PluginCall) {
+        val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        val subpath = call.getString("subpath", "")?.trim().orEmpty()
+        val name = call.getString("name", "")?.trim().orEmpty()
+        executor.execute {
+            runCatching {
+                engine.createSubfolder(folderId, subpath, name)
+                JSObject().apply { put("ok", true) }
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Erro ao criar subpasta.") }
         }
     }
 
@@ -491,6 +574,16 @@ class DriveSyncPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun forgetDevice(call: PluginCall) {
+        val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        val deviceId = call.getString("deviceId", "")?.trim().orEmpty()
+        executor.execute {
+            db.forgetDevice(folderId, deviceId)
+            call.resolve(JSObject().apply { put("ok", true) })
+        }
+    }
+
+    @PluginMethod
     fun syncNow(call: PluginCall) {
         val folderId = call.getString("folderId", "")?.trim().orEmpty()
         if (!db.getAccountInfo().connected) {
@@ -584,6 +677,11 @@ class DriveSyncPlugin : Plugin() {
             <p>$detail</p>
             <a href="com.drivesync.mobile://oauth-done">Voltar ao DriveSync</a>
           </div>
+          <script>
+            setTimeout(function() {
+              window.location.href = "com.drivesync.mobile://oauth-done";
+            }, 120);
+          </script>
         </body>
         </html>
     """.trimIndent()

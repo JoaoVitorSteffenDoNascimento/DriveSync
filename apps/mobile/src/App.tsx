@@ -2,38 +2,33 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Activity,
   Check,
-  Cloud,
   Copy,
   Crown,
-  FileJson,
+  ExternalLink,
   FilePlus2,
-  Folder,
   FolderOpen,
   FolderSync,
-  KeyRound,
   Laptop,
   Lock,
+  Pause,
+  Play,
   Plus,
   RefreshCw,
-  Search,
   Settings,
   Share2,
+  SlidersHorizontal,
   Smartphone,
   Trash2,
   UserCheck,
   UserX,
   Users,
-  X,
 } from 'lucide-react';
 import {
   formatBytes,
   normalizeEmail,
-  type FolderInviteInfo,
-  type FolderKind,
+  type FolderRuntimeState,
   type RemoteDeletePolicy,
-  type RemoteFolderItem,
   type SenderPolicyMode,
-  type SyncDirection,
   type SyncFolderConfig,
 } from '@drivesync/shared';
 import {
@@ -42,22 +37,76 @@ import {
   type MobileSettings,
   type MobileSnapshot,
 } from './native/driveSyncNative';
+import { MobileAuthSheet } from './components/MobileAuthSheet';
+import { MobileConnectSheet } from './components/MobileConnectSheet';
+import { MobileFolderBrowserSheet } from './components/MobileFolderBrowserSheet';
+import { MobileFolderSettingsSheet } from './components/MobileFolderSettingsSheet';
+import { MobileShareSheet } from './components/MobileShareSheet';
 
 type Tab = 'folders' | 'people' | 'activity' | 'settings';
+type ActivitySubTab = 'recent' | 'blocked_4gb' | 'blocked_sender';
 
 const DOWNLOAD_SITE_URL = 'https://joaovitorsteffendonascimento.github.io/DriveSync/';
+const RELEASES_URL = 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest';
+
+function renderStatusBadge(paused: boolean, rt?: FolderRuntimeState) {
+  if (paused) {
+    return <span className="badge badge-warning">Pausada</span>;
+  }
+  switch (rt?.status) {
+    case 'ok':
+      return <span className="badge badge-ok">Sincronizado</span>;
+    case 'syncing':
+      return <span className="badge">Sincronizando</span>;
+    case 'warning':
+      return <span className="badge badge-warning">Atenção</span>;
+    case 'error':
+      return <span className="badge badge-error">Erro</span>;
+    case 'paused':
+      return <span className="badge badge-warning">Pausada</span>;
+    default:
+      return <span className="badge">Pronto</span>;
+  }
+}
+
+function describeSenderPolicy(mode: SenderPolicyMode): string {
+  if (mode === 'all') return 'Recebe de todos';
+  if (mode === 'allowlist') return 'Somente lista permitida';
+  return 'Lista de bloqueio';
+}
+
+const DriveSyncLogoMark: React.FC = () => (
+  <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <rect width="64" height="64" rx="14" fill="#2563EB" />
+    <path
+      d="M19 43h26a9.5 9.5 0 0 0 1.5-18.9A13.5 13.5 0 0 0 20.5 21 10.5 10.5 0 0 0 19 43Z"
+      fill="#FFFFFF"
+    />
+    <path
+      d="M26 32l6-6 6 6M32 26v12"
+      stroke="#2563EB"
+      strokeWidth="3.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  </svg>
+);
 
 export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
   bridge = mobileBridge,
 }) => {
   const [snap, setSnap] = useState<MobileSnapshot | null>(null);
   const [tab, setTab] = useState<Tab>('folders');
+  const [activitySubTab, setActivitySubTab] = useState<ActivitySubTab>('recent');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [shareFolder, setShareFolder] = useState<SyncFolderConfig | null>(null);
+  const [browserFolder, setBrowserFolder] = useState<SyncFolderConfig | null>(null);
+  const [settingsFolder, setSettingsFolder] = useState<SyncFolderConfig | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -73,6 +122,28 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [refresh]);
+
+  const hasActiveSync = Boolean(
+    snap && Object.values(snap.runtime).some((rt) => rt.status === 'syncing'),
+  );
+
+  useEffect(() => {
+    if (!hasActiveSync) return;
+    const timer = setInterval(() => {
+      void refresh();
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [hasActiveSync, refresh]);
+
   if (!snap) {
     return (
       <div className="mobile-content" style={{ paddingTop: 48 }}>
@@ -83,11 +154,21 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
 
   const blocked4gb = snap.blockedFiles.filter((b) => b.reason === 'exceeds_4gb');
 
+  const handleSyncAll = async () => {
+    setError(null);
+    const activeFolders = snap.folders.filter((f) => !f.paused);
+    for (const f of activeFolders) {
+      await bridge.syncNow({ folderId: f.id }).catch(() => {});
+    }
+    setNotice('Sincronização iniciada para todas as pastas ativas.');
+    await refresh();
+  };
+
   return (
     <div className="mobile-shell">
       <header className="mobile-header">
         <div className="row-gap">
-          <Cloud size={20} color="var(--primary)" />
+          <DriveSyncLogoMark />
           <div>
             <strong style={{ fontSize: 16 }}>DriveSync</strong>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -113,13 +194,24 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
           <div>
             <div className="row-between" style={{ marginBottom: 12 }}>
               <h1 style={{ margin: 0, fontSize: 19 }}>Pastas</h1>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => (snap.account.connected ? setShowWizard(true) : setShowAuthModal(true))}
-              >
-                <Plus size={15} /> Conectar Pasta
-              </button>
+              <div className="row-gap">
+                {snap.account.connected && snap.folders.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => void handleSyncAll()}
+                  >
+                    <RefreshCw size={14} /> Sincronizar tudo
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => (snap.account.connected ? setShowWizard(true) : setShowAuthModal(true))}
+                >
+                  <Plus size={15} /> Conectar Pasta
+                </button>
+              </div>
             </div>
 
             {!snap.account.connected && (
@@ -134,9 +226,21 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
             )}
 
             {blocked4gb.length > 0 && (
-              <div className="alert">
-                <strong>{blocked4gb.length}</strong> arquivo(s) bloqueado(s) no upload por passarem de{' '}
-                <strong>4 GB</strong>.
+              <div className="alert row-between">
+                <span>
+                  <strong>{blocked4gb.length}</strong> arquivo(s) bloqueado(s) no upload por passarem de{' '}
+                  <strong>4 GB</strong>.
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => {
+                    setActivitySubTab('blocked_4gb');
+                    setTab('activity');
+                  }}
+                >
+                  Ver detalhes
+                </button>
               </div>
             )}
 
@@ -145,11 +249,15 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                 <p style={{ marginTop: 0, color: 'var(--text-muted)' }}>
                   Toque em <strong>+ Conectar Pasta</strong> para escolher uma pasta do celular ou entrar pelo código de um Drive Master.
                 </p>
+                <button type="button" className="btn btn-primary" onClick={() => setShowWizard(true)}>
+                  <Plus size={15} /> Conectar primeira pasta
+                </button>
               </div>
             )}
 
             {snap.folders.map((f) => {
               const rt = snap.runtime[f.id];
+              const pct = Math.max(0, Math.min(100, rt?.progressPercent ?? 0));
               return (
                 <div key={f.id} className="card">
                   <div className="row-between" style={{ marginBottom: 8 }}>
@@ -159,27 +267,58 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                       ) : (
                         <Lock size={17} color="var(--primary)" />
                       )}
-                      <strong>{f.name}</strong>
+                      <div>
+                        <strong>{f.name}</strong>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                          {f.kind === 'master' ? 'Drive Master' : 'Pasta Pessoal'}
+                        </div>
+                      </div>
                     </div>
-                    <span className={`badge ${rt?.status === 'ok' ? 'badge-ok' : rt?.status === 'error' ? 'badge-error' : ''}`}>
-                      {rt?.status === 'ok' ? 'Sincronizado' : rt?.status === 'syncing' ? 'Sincronizando' : rt?.status === 'error' ? 'Erro' : 'Pronto'}
-                    </span>
+                    {renderStatusBadge(f.paused, rt)}
                   </div>
 
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    <div>Drive: <strong>{f.remoteFolderName}</strong></div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 10 }}>
                     <div>
-                      Modo: {f.direction === 'receive_only' ? 'Só Receber' : 'Enviar e Receber'} • Apagar no Drive:{' '}
-                      {f.onRemoteDelete === 'keep_local' ? 'Mantém no celular' : 'Apaga do celular'}
+                      Drive: <strong>{f.remoteFolderName}</strong>
                     </div>
+                    <div>
+                      Modo: {f.direction === 'receive_only' ? 'Somente Receber' : 'Enviar e Receber'} • Apagar no
+                      Drive: {f.onRemoteDelete === 'keep_local' ? 'Mantém no celular' : 'Apaga do celular'}
+                    </div>
+                    {f.kind === 'master' && (
+                      <div>Remetentes: {describeSenderPolicy(f.senderPolicy.mode)}</div>
+                    )}
+                    {rt && (
+                      <div>
+                        {rt.syncedFilesCount} arquivo(s) mapeado(s)
+                        {rt.keptLocalCount > 0 ? ` • ${rt.keptLocalCount} mantido(s) no celular` : ''}
+                      </div>
+                    )}
                     {rt?.message && <div>Status: {rt.message}</div>}
                   </div>
+
+                  {rt?.status === 'syncing' && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div className="row-between" style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                        <span>{rt.currentFile || 'Processando arquivos...'}</span>
+                        <span>
+                          {rt.bytesTotal
+                            ? `${formatBytes(rt.bytesTransferred ?? 0)} / ${formatBytes(rt.bytesTotal)}`
+                            : `${pct}%`}
+                        </span>
+                      </div>
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{ width: `${Math.max(8, pct)}%` }} />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="row-gap">
                     <button
                       type="button"
                       className="btn btn-primary btn-sm"
                       onClick={async () => {
+                        setError(null);
                         try {
                           const res = await bridge.pickAndImportFiles({ folderId: f.id });
                           if (res.skippedOver4GB.length > 0) {
@@ -193,33 +332,57 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                         }
                       }}
                     >
-                      <FilePlus2 size={14} /> Adicionar
+                      <FilePlus2 size={14} /> Adicionar arquivos
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => setBrowserFolder(f)}
+                    >
+                      <FolderOpen size={14} /> Abrir pasta
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={f.paused}
+                      onClick={async () => {
+                        setError(null);
+                        try {
+                          await bridge.syncNow({ folderId: f.id });
+                          await refresh();
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : String(e));
+                        }
+                      }}
+                    >
+                      <RefreshCw size={14} /> Sincronizar agora
                     </button>
 
                     <button
                       type="button"
                       className="btn btn-sm"
                       onClick={async () => {
-                        await bridge.syncNow({ folderId: f.id });
-                        await refresh();
+                        setError(null);
+                        try {
+                          await bridge.updateSyncFolder({ folder: { ...f, paused: !f.paused } });
+                          await refresh();
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : String(e));
+                        }
                       }}
                     >
-                      <RefreshCw size={14} /> Sincronizar
+                      {f.paused ? <Play size={14} /> : <Pause size={14} />}
+                      {f.paused ? 'Retomar' : 'Pausar'}
                     </button>
 
                     <button type="button" className="btn btn-sm" onClick={() => setShareFolder(f)}>
-                      <Share2 size={14} /> Código
+                      <Share2 size={14} /> Código / Convidar
                     </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger"
-                      onClick={async () => {
-                        await bridge.deleteSyncFolder({ folderId: f.id });
-                        await refresh();
-                      }}
-                    >
-                      <Trash2 size={14} />
+                    <button type="button" className="btn btn-sm" onClick={() => setSettingsFolder(f)}>
+                      <SlidersHorizontal size={14} /> Opções
                     </button>
                   </div>
                 </div>
@@ -229,30 +392,21 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
         )}
 
         {tab === 'people' && (
-          <MobilePeopleTab bridge={bridge} snap={snap} onRefresh={refresh} />
+          <MobilePeopleTab
+            bridge={bridge}
+            snap={snap}
+            onRefresh={refresh}
+            onError={setError}
+            onNotice={setNotice}
+          />
         )}
 
         {tab === 'activity' && (
-          <div>
-            <h1 style={{ margin: '0 0 12px', fontSize: 19 }}>Atividade & Bloqueios</h1>
-            <div className="card">
-              {snap.recentActivity.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--text-muted)' }}>Nenhuma atividade registrada ainda.</p>
-              ) : (
-                snap.recentActivity.map((ev) => (
-                  <div key={ev.id} className="list-row">
-                    <div>
-                      <strong style={{ fontSize: 13 }}>{ev.message}</strong>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {ev.folderName}
-                        {ev.fileSizeBytes ? ` • ${formatBytes(ev.fileSizeBytes)}` : ''}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <MobileActivityTab
+            snap={snap}
+            subTab={activitySubTab}
+            onSubTabChange={setActivitySubTab}
+          />
         )}
 
         {tab === 'settings' && (
@@ -326,6 +480,24 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
           onClose={() => setShareFolder(null)}
         />
       )}
+
+      {browserFolder && (
+        <MobileFolderBrowserSheet
+          bridge={bridge}
+          folder={browserFolder}
+          onClose={() => setBrowserFolder(null)}
+          onRefresh={refresh}
+        />
+      )}
+
+      {settingsFolder && (
+        <MobileFolderSettingsSheet
+          bridge={bridge}
+          folder={settingsFolder}
+          onClose={() => setSettingsFolder(null)}
+          onSaved={refresh}
+        />
+      )}
     </div>
   );
 };
@@ -334,40 +506,76 @@ const MobilePeopleTab: React.FC<{
   bridge: DriveSyncNativePlugin;
   snap: MobileSnapshot;
   onRefresh: () => Promise<void>;
-}> = ({ bridge, snap, onRefresh }) => {
+  onError: (msg: string | null) => void;
+  onNotice: (msg: string | null) => void;
+}> = ({ bridge, snap, onRefresh, onError, onNotice }) => {
   const [selectedFolderId, setSelectedFolderId] = useState(snap.folders[0]?.id ?? '');
   const [newEmail, setNewEmail] = useState('');
+  const [newAllowed, setNewAllowed] = useState<'allow' | 'block'>('allow');
   const folder = snap.folders.find((f) => f.id === selectedFolderId) ?? snap.folders[0];
 
   const senders = snap.knownSenders.filter((s) => !folder || s.folderId === folder.id);
   const rulesMap = new Map<string, { email: string; displayName: string; allowed: boolean }>();
   for (const s of senders) {
     const e = normalizeEmail(s.email);
-    rulesMap.set(e, { email: e, displayName: s.displayName, allowed: folder?.senderPolicy.mode !== 'allowlist' });
+    rulesMap.set(e, {
+      email: e,
+      displayName: s.displayName,
+      allowed: folder?.senderPolicy.mode !== 'allowlist',
+    });
   }
   for (const r of folder?.senderPolicy.rules ?? []) {
     const e = normalizeEmail(r.email);
-    rulesMap.set(e, { email: e, displayName: r.displayName || rulesMap.get(e)?.displayName || '', allowed: r.allowed });
+    rulesMap.set(e, {
+      email: e,
+      displayName: r.displayName || rulesMap.get(e)?.displayName || '',
+      allowed: r.allowed,
+    });
   }
+
+  const updatePolicyMode = async (mode: SenderPolicyMode) => {
+    if (!folder) return;
+    onError(null);
+    try {
+      await bridge.updateSyncFolder({
+        folder: {
+          ...folder,
+          senderPolicy: {
+            ...folder.senderPolicy,
+            mode,
+            unknownSenderAction: mode === 'allowlist' ? 'block' : 'allow',
+          },
+        },
+      });
+      await onRefresh();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const toggleSender = async (email: string, allowed: boolean) => {
     if (!folder) return;
-    const norm = normalizeEmail(email);
-    const nextRules = [
-      ...folder.senderPolicy.rules.filter((r) => normalizeEmail(r.email) !== norm),
-      { email: norm, allowed },
-    ];
-    await bridge.updateSyncFolder({
-      folder: {
-        ...folder,
-        senderPolicy: {
-          ...folder.senderPolicy,
-          mode: folder.senderPolicy.mode === 'all' ? 'blocklist' : folder.senderPolicy.mode,
-          rules: nextRules,
+    onError(null);
+    try {
+      const norm = normalizeEmail(email);
+      const nextRules = [
+        ...folder.senderPolicy.rules.filter((r) => normalizeEmail(r.email) !== norm),
+        { email: norm, allowed },
+      ];
+      await bridge.updateSyncFolder({
+        folder: {
+          ...folder,
+          senderPolicy: {
+            ...folder.senderPolicy,
+            mode: folder.senderPolicy.mode === 'all' ? 'blocklist' : folder.senderPolicy.mode,
+            rules: nextRules,
+          },
         },
-      },
-    });
-    await onRefresh();
+      });
+      await onRefresh();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   return (
@@ -392,11 +600,30 @@ const MobilePeopleTab: React.FC<{
                 <div>
                   <strong>{d.deviceName}</strong>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {d.platform} • {d.accountEmail}
+                    {d.platform} • {d.accountEmail} •{' '}
+                    {d.syncMode === 'receive_only' ? 'Só recebe' : 'Envia e recebe'}
                   </div>
                 </div>
               </div>
-              {d.isCurrentDevice && <span className="badge badge-ok">Este celular</span>}
+              {d.isCurrentDevice ? (
+                <span className="badge badge-ok">Este celular</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  onClick={async () => {
+                    onError(null);
+                    try {
+                      await bridge.forgetDevice({ folderId: d.folderId, deviceId: d.deviceId });
+                      await onRefresh();
+                    } catch (e) {
+                      onError(e instanceof Error ? e.message : String(e));
+                    }
+                  }}
+                >
+                  <Trash2 size={14} /> Remover
+                </button>
+              )}
             </div>
           ))
         )}
@@ -404,21 +631,51 @@ const MobilePeopleTab: React.FC<{
 
       {folder && (
         <div className="card">
-          <strong style={{ display: 'block', marginBottom: 8 }}>De quem receber no Master</strong>
+          <div className="row-between" style={{ marginBottom: 10 }}>
+            <strong>De quem receber no Master</strong>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={async () => {
+                onError(null);
+                await bridge.syncNow({ folderId: folder.id });
+                onNotice('Reaplicando filtros de remetentes...');
+                await onRefresh();
+              }}
+            >
+              <RefreshCw size={14} /> Reaplicar filtros agora
+            </button>
+          </div>
+
           {snap.folders.length > 1 && (
+            <div className="form-group">
+              <label className="form-label">Pasta</label>
+              <select
+                className="select"
+                value={folder.id}
+                onChange={(e) => setSelectedFolderId(e.target.value)}
+              >
+                {snap.folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label className="form-label">Regra geral</label>
             <select
               className="select"
-              style={{ marginBottom: 10 }}
-              value={folder.id}
-              onChange={(e) => setSelectedFolderId(e.target.value)}
+              value={folder.senderPolicy.mode}
+              onChange={(e) => void updatePolicyMode(e.target.value as SenderPolicyMode)}
             >
-              {snap.folders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
+              <option value="blocklist">Receber de todos (exceto bloqueados)</option>
+              <option value="allowlist">Receber somente de quem eu permitir</option>
+              <option value="all">Receber de qualquer pessoa (sem filtro)</option>
             </select>
-          )}
+          </div>
 
           <form
             className="row-gap"
@@ -426,46 +683,167 @@ const MobilePeopleTab: React.FC<{
             onSubmit={async (e) => {
               e.preventDefault();
               if (!newEmail.trim()) return;
-              await toggleSender(newEmail, true);
+              await toggleSender(newEmail, newAllowed === 'allow');
               setNewEmail('');
             }}
           >
             <input
               className="input"
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 180 }}
               type="email"
               placeholder="Adicionar e-mail (ex.: joao@gmail.com)"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
             />
+            <select
+              className="select"
+              style={{ width: 145 }}
+              value={newAllowed}
+              onChange={(e) => setNewAllowed(e.target.value as 'allow' | 'block')}
+            >
+              <option value="allow">Receber dele(a)</option>
+              <option value="block">Não receber</option>
+            </select>
             <button type="submit" className="btn btn-primary btn-sm">
               Adicionar
             </button>
           </form>
 
-          {Array.from(rulesMap.values()).map((p) => (
-            <div key={p.email} className="list-row">
-              <div>
-                <strong>{p.displayName || p.email}</strong>
-                {p.displayName && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.email}</div>}
+          {rulesMap.size === 0 ? (
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>
+              Nenhuma regra ou remetente detectado ainda nesta pasta.
+            </p>
+          ) : (
+            Array.from(rulesMap.values()).map((p) => (
+              <div key={p.email} className="list-row">
+                <div>
+                  <strong>{p.displayName || p.email}</strong>
+                  {p.displayName && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.email}</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className={`toggle-pill ${p.allowed ? 'allowed' : 'blocked'}`}
+                  onClick={() => void toggleSender(p.email, !p.allowed)}
+                >
+                  {p.allowed ? (
+                    <>
+                      <UserCheck size={14} /> Recebendo
+                    </>
+                  ) : (
+                    <>
+                      <UserX size={14} /> Bloqueado
+                    </>
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                className={`btn btn-sm ${p.allowed ? '' : 'btn-danger'}`}
-                onClick={() => void toggleSender(p.email, !p.allowed)}
-              >
-                {p.allowed ? (
-                  <>
-                    <UserCheck size={14} /> Recebendo
-                  </>
-                ) : (
-                  <>
-                    <UserX size={14} /> Bloqueado
-                  </>
-                )}
-              </button>
-            </div>
-          ))}
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MobileActivityTab: React.FC<{
+  snap: MobileSnapshot;
+  subTab: ActivitySubTab;
+  onSubTabChange: (next: ActivitySubTab) => void;
+}> = ({ snap, subTab, onSubTabChange }) => {
+  const blocked4gb = snap.blockedFiles.filter((b) => b.reason === 'exceeds_4gb');
+  const blockedSenders = snap.blockedFiles.filter((b) => b.reason === 'sender_blocked');
+
+  return (
+    <div>
+      <h1 style={{ margin: '0 0 12px', fontSize: 19 }}>Atividade & Bloqueios</h1>
+
+      <div className="row-gap" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className={`btn btn-sm ${subTab === 'recent' ? 'btn-primary' : ''}`}
+          onClick={() => onSubTabChange('recent')}
+        >
+          Atividade recente ({snap.recentActivity.length})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${subTab === 'blocked_4gb' ? 'btn-primary' : ''}`}
+          onClick={() => onSubTabChange('blocked_4gb')}
+        >
+          Acima de 4 GB ({blocked4gb.length})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${subTab === 'blocked_sender' ? 'btn-primary' : ''}`}
+          onClick={() => onSubTabChange('blocked_sender')}
+        >
+          Ignorados por remetente ({blockedSenders.length})
+        </button>
+      </div>
+
+      {subTab === 'recent' && (
+        <div className="card">
+          {snap.recentActivity.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--text-muted)' }}>Nenhuma atividade registrada ainda.</p>
+          ) : (
+            snap.recentActivity.map((ev) => (
+              <div key={ev.id} className="list-row">
+                <div>
+                  <strong style={{ fontSize: 13 }}>{ev.message}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {ev.folderName}
+                    {ev.fileSizeBytes ? ` • ${formatBytes(ev.fileSizeBytes)}` : ''}
+                  </div>
+                </div>
+                <span className="badge">{ev.kind}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {subTab === 'blocked_4gb' && (
+        <div className="card">
+          {blocked4gb.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+              Nenhum arquivo acima de 4 GB detectado.
+            </p>
+          ) : (
+            blocked4gb.map((b) => (
+              <div key={b.id} className="list-row">
+                <div>
+                  <strong style={{ fontSize: 13 }}>{b.relativePath}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {b.folderName} • {formatBytes(b.fileSizeBytes)} — {b.detail}
+                  </div>
+                </div>
+                <span className="badge badge-warning">&gt; 4 GB</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {subTab === 'blocked_sender' && (
+        <div className="card">
+          {blockedSenders.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+              Nenhum arquivo ignorado por filtro de remetente.
+            </p>
+          ) : (
+            blockedSenders.map((b) => (
+              <div key={b.id} className="list-row">
+                <div>
+                  <strong style={{ fontSize: 13 }}>{b.relativePath}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {b.folderName} • Remetente: {b.authorEmail || 'desconhecido'}
+                  </div>
+                </div>
+                <span className="badge badge-error">Ignorado</span>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
@@ -481,6 +859,10 @@ const MobileSettingsTab: React.FC<{
 }> = ({ bridge, snap, onOpenAuth, onRefresh, onNotice }) => {
   const [form, setForm] = useState<MobileSettings>(snap.settings);
   const [copiedAppLink, setCopiedAppLink] = useState(false);
+
+  useEffect(() => {
+    setForm(snap.settings);
+  }, [snap.settings]);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -498,18 +880,28 @@ const MobileSettingsTab: React.FC<{
         <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
           Envie o link abaixo para instalar no Windows 10/11, Linux ou Android (APK):
         </p>
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={async () => {
-            await navigator.clipboard.writeText(DOWNLOAD_SITE_URL);
-            setCopiedAppLink(true);
-            setTimeout(() => setCopiedAppLink(false), 2000);
-          }}
-        >
-          {copiedAppLink ? <Check size={14} /> : <Copy size={14} />}
-          {copiedAppLink ? 'Link de download copiado!' : 'Copiar link de download do app'}
-        </button>
+        <div className="row-gap">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={async () => {
+              await navigator.clipboard.writeText(DOWNLOAD_SITE_URL);
+              setCopiedAppLink(true);
+              setTimeout(() => setCopiedAppLink(false), 2000);
+            }}
+          >
+            {copiedAppLink ? <Check size={14} /> : <Copy size={14} />}
+            {copiedAppLink ? 'Link de download copiado!' : 'Copiar link de download do app'}
+          </button>
+
+          <a className="btn btn-sm" href={DOWNLOAD_SITE_URL} target="_blank" rel="noreferrer">
+            <ExternalLink size={14} /> Abrir site
+          </a>
+
+          <a className="btn btn-sm" href={RELEASES_URL} target="_blank" rel="noreferrer">
+            <ExternalLink size={14} /> Releases
+          </a>
+        </div>
       </div>
 
       <div className="card">
@@ -518,6 +910,11 @@ const MobileSettingsTab: React.FC<{
             <strong>Conta Google</strong>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               {snap.account.connected ? snap.account.email : 'Não conectada'}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+              {snap.account.hasCustomOAuthClient
+                ? 'Credencial OAuth configurada'
+                : 'Credencial OAuth (credentials.json) pendente'}
             </div>
           </div>
           <div className="row-gap">
@@ -562,6 +959,19 @@ const MobileSettingsTab: React.FC<{
           </select>
         </div>
 
+        <div className="form-group">
+          <label className="form-label">Intervalo da sincronização automática</label>
+          <select
+            className="select"
+            value={form.pollIntervalSeconds}
+            onChange={(e) => setForm({ ...form, pollIntervalSeconds: Number(e.target.value) })}
+          >
+            <option value={900}>A cada 15 minutos</option>
+            <option value={1800}>A cada 30 minutos</option>
+            <option value={3600}>A cada 60 minutos</option>
+          </select>
+        </div>
+
         <label className="row-gap" style={{ marginBottom: 10 }}>
           <input
             type="checkbox"
@@ -592,370 +1002,4 @@ const MobileSettingsTab: React.FC<{
   );
 };
 
-const MobileAuthSheet: React.FC<{
-  bridge: DriveSyncNativePlugin;
-  hasClient: boolean;
-  onClose: () => void;
-  onUpdated: () => Promise<void>;
-}> = ({ bridge, hasClient, onClose, onUpdated }) => {
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-  const [showManual, setShowManual] = useState(!hasClient);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const handleLogin = async () => {
-    setErr(null);
-    setLoading(true);
-    try {
-      if (clientId.trim()) {
-        await bridge.saveOAuthClient({
-          clientId: clientId.trim(),
-          clientSecret: clientSecret.trim(),
-        });
-      }
-      await bridge.startGoogleOAuth();
-      await onUpdated();
-      onClose();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="sheet-backdrop">
-      <div className="sheet-box">
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <strong style={{ fontSize: 17 }}>Conectar Google Drive</strong>
-          <button type="button" className="btn btn-sm" onClick={onClose}>
-            <X size={16} />
-          </button>
-        </div>
-
-        {err && <div className="alert alert-error">{err}</div>}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
-          <button type="button" className="btn btn-primary" disabled={loading} onClick={handleLogin}>
-            <Cloud size={17} /> {loading ? 'Conectando...' : 'Entrar com Google'}
-          </button>
-
-          <label className="btn">
-            <FileJson size={16} /> Carregar credentials.json
-            <input
-              type="file"
-              accept=".json,application/json"
-              style={{ display: 'none' }}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  await bridge.uploadGoogleOAuthJson({ rawJson: await file.text() });
-                  await onUpdated();
-                  setShowManual(false);
-                } catch (ex) {
-                  setErr(ex instanceof Error ? ex.message : String(ex));
-                }
-              }}
-            />
-          </label>
-        </div>
-
-        <button type="button" className="btn btn-sm" onClick={() => setShowManual((v) => !v)}>
-          <KeyRound size={14} /> {showManual ? 'Ocultar Client ID' : 'Informar Client ID manual'}
-        </button>
-
-        {showManual && (
-          <div style={{ marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Google Client ID (Desktop App)</label>
-              <input className="input" value={clientId} onChange={(e) => setClientId(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Client Secret</label>
-              <input
-                className="input"
-                type="password"
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const MobileConnectSheet: React.FC<{
-  bridge: DriveSyncNativePlugin;
-  defaultOnRemoteDelete: RemoteDeletePolicy;
-  onClose: () => void;
-  onCreated: () => Promise<void>;
-}> = ({ bridge, defaultOnRemoteDelete, onClose, onCreated }) => {
-  const [name, setName] = useState('Drive Master');
-  const [kind, setKind] = useState<FolderKind>('master');
-  const [codeInput, setCodeInput] = useState('');
-  const [localUri, setLocalUri] = useState('');
-  const [localLabel, setLocalLabel] = useState('');
-  const [remoteFolder, setRemoteFolder] = useState<RemoteFolderItem | null>(null);
-  const [driveList, setDriveList] = useState<RemoteFolderItem[]>([]);
-  const [direction, setDirection] = useState<SyncDirection>('bidirectional');
-  const [onRemoteDelete, setOnRemoteDelete] = useState<RemoteDeletePolicy>(defaultOnRemoteDelete);
-  const [senderMode, setSenderMode] = useState<SenderPolicyMode>('blocklist');
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const loadDrive = async (shared: boolean) => {
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await bridge.listDriveFolders({ parentId: 'root', shared });
-      setDriveList(res.items);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="sheet-backdrop">
-      <div className="sheet-box">
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <strong style={{ fontSize: 17 }}>Conectar Pasta no Celular</strong>
-          <button type="button" className="btn btn-sm" onClick={onClose}>
-            <X size={16} />
-          </button>
-        </div>
-
-        {err && <div className="alert alert-error">{err}</div>}
-
-        <div className="form-group">
-          <label className="form-label">Entrar por Código ou Link (opcional)</label>
-          <div className="row-gap">
-            <input
-              className="input"
-              style={{ flex: 1 }}
-              placeholder="DS1... ou DS-XXXX-XXXX ou link"
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              disabled={busy || !codeInput.trim()}
-              onClick={async () => {
-                setBusy(true);
-                setErr(null);
-                try {
-                  const res = await bridge.resolveFolderCode({ codeOrLink: codeInput });
-                  setKind(res.kind);
-                  setName(res.remoteFolderName);
-                  setDirection(res.canWrite ? 'bidirectional' : 'receive_only');
-                  setRemoteFolder({
-                    id: res.remoteFolderId,
-                    name: res.remoteFolderName,
-                    shared: true,
-                    ownerEmail: res.ownerEmail,
-                    ownerName: res.ownerName,
-                    canWrite: res.canWrite,
-                  });
-                } catch (e) {
-                  setErr(e instanceof Error ? e.message : String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <Search size={14} /> Buscar
-            </button>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Nome desta pasta</label>
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Pasta no celular que vai sincronizar</label>
-          <button
-            type="button"
-            className="btn"
-            onClick={async () => {
-              const picked = await bridge.pickLocalFolder();
-              setLocalUri(picked.uri);
-              setLocalLabel(picked.displayName);
-            }}
-          >
-            <FolderOpen size={16} /> {localLabel || 'Escolher pasta do celular'}
-          </button>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Pasta no Google Drive</label>
-          <div className="row-gap" style={{ marginBottom: 6 }}>
-            <button type="button" className="btn btn-sm" onClick={() => void loadDrive(false)}>
-              Meu Drive
-            </button>
-            <button type="button" className="btn btn-sm" onClick={() => void loadDrive(true)}>
-              Compartilhados
-            </button>
-          </div>
-          {remoteFolder && (
-            <div className="alert alert-info" style={{ marginBottom: 6 }}>
-              Selecionada: <strong>{remoteFolder.name}</strong>
-            </div>
-          )}
-          {driveList.map((item) => (
-            <div
-              key={item.id}
-              className="list-row"
-              style={{ cursor: 'pointer' }}
-              onClick={() => setRemoteFolder(item)}
-            >
-              <span className="row-gap">
-                <Folder size={15} /> {item.name}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Sentido neste celular</label>
-          <select
-            className="select"
-            value={direction}
-            onChange={(e) => setDirection(e.target.value as SyncDirection)}
-          >
-            <option value="bidirectional">Enviar e Receber</option>
-            <option value="receive_only">Somente Receber (Espelho)</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Se apagarem no Drive após baixar no celular</label>
-          <select
-            className="select"
-            value={onRemoteDelete}
-            onChange={(e) => setOnRemoteDelete(e.target.value as RemoteDeletePolicy)}
-          >
-            <option value="keep_local">Manter no celular (só apaga no Drive)</option>
-            <option value="mirror_trash">Apagar do celular também</option>
-          </select>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ width: '100%' }}
-          disabled={busy || !localUri || !remoteFolder}
-          onClick={async () => {
-            if (!remoteFolder) return;
-            setBusy(true);
-            try {
-              await bridge.createSyncFolder({
-                input: {
-                  name: name.trim() || remoteFolder.name,
-                  localPath: localUri,
-                  remoteFolderId: remoteFolder.id,
-                  remoteFolderName: remoteFolder.name,
-                  kind,
-                  direction,
-                  onRemoteDelete,
-                  onLocalDelete: 'ignore',
-                  senderPolicy: {
-                    mode: kind === 'personal' ? 'all' : senderMode,
-                    unknownSenderAction: 'allow',
-                    rules: [],
-                  },
-                },
-              });
-              await onCreated();
-              onClose();
-            } catch (e) {
-              setErr(e instanceof Error ? e.message : String(e));
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Concluir e Sincronizar
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const MobileShareSheet: React.FC<{
-  bridge: DriveSyncNativePlugin;
-  folder: SyncFolderConfig;
-  onClose: () => void;
-}> = ({ bridge, folder, onClose }) => {
-  const [invite, setInvite] = useState<FolderInviteInfo | null>(null);
-  const [email, setEmail] = useState('');
-  const [msg, setMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    void bridge.generateFolderInvite({ folderId: folder.id }).then(setInvite).catch(() => {});
-  }, [bridge, folder.id]);
-
-  return (
-    <div className="sheet-backdrop">
-      <div className="sheet-box">
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <strong>Código — {folder.name}</strong>
-          <button type="button" className="btn btn-sm" onClick={onClose}>
-            <X size={16} />
-          </button>
-        </div>
-
-        {msg && <div className="alert alert-info">{msg}</div>}
-
-        {invite && (
-          <div className="card" style={{ background: 'var(--surface-muted)' }}>
-            <div className="form-group">
-              <label className="form-label">Código Completo</label>
-              <input className="input" readOnly value={invite.fullCode} />
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => void navigator.clipboard.writeText(invite.fullCode)}
-            >
-              <Copy size={14} /> Copiar código
-            </button>
-          </div>
-        )}
-
-        <form
-          className="row-gap"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!email.trim()) return;
-            await bridge.shareFolder({
-              folderId: folder.id,
-              input: { accessType: 'user', role: 'reader', email: email.trim() },
-            });
-            setMsg(`Acesso liberado para ${email.trim()}`);
-            setEmail('');
-          }}
-        >
-          <input
-            className="input"
-            style={{ flex: 1 }}
-            type="email"
-            placeholder="Liberar e-mail (ex.: joao@gmail.com)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <button type="submit" className="btn btn-primary btn-sm">
-            Liberar
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
+export default MobileApp;
