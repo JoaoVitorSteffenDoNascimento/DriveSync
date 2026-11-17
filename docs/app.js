@@ -2,59 +2,66 @@ const REPO_OWNER = 'JoaoVitorSteffenDoNascimento';
 const REPO_NAME = 'DriveSync';
 const LATEST_DOWNLOAD_BASE = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download`;
 const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
-const THEME_KEY = 'drivesync_theme_v1';
-const CACHE_KEY = 'drivesync_release_cache_v2';
+const CACHE_KEY = 'drivesync_release_cache_v3';
 
-const DEFAULT_ASSETS = {
+const PLATFORM_ASSETS = {
   'win-exe': {
+    platform: 'windows',
     filename: 'DriveSync-Setup-Windows-x64.exe',
-    label: 'Baixar para Windows (.exe)',
-    strip: 'PARA WINDOWS 10/11 · EXECUTÁVEL .EXE (X64)',
-    matcher: (n) => /\.exe$/i.test(n),
+    heroLabel: 'Baixar para Windows (.exe)',
+    hint: 'Windows 10/11 (x64) • Download direto do instalador .exe',
+    baseLabel: 'x64 • Instalador .exe',
+    match: (name) => /\.exe$/i.test(name),
   },
   'win-msi': {
+    platform: 'windows',
     filename: 'DriveSync-Windows-x64.msi',
-    label: 'Baixar Windows (.msi)',
-    strip: 'PARA WINDOWS 10/11 · PACOTE .MSI (X64)',
-    matcher: (n) => /\.msi$/i.test(n),
+    match: (name) => /\.msi$/i.test(name),
   },
   'linux-appimage': {
+    platform: 'linux',
     filename: 'DriveSync-Linux-x64.AppImage',
-    label: 'Baixar para Linux (.AppImage)',
-    strip: 'PARA LINUX · APPIMAGE (X86_64)',
-    matcher: (n) => /\.AppImage$/i.test(n),
+    heroLabel: 'Baixar para Linux (.AppImage)',
+    hint: 'Linux (x86_64) • Download direto do AppImage universal',
+    baseLabel: 'x86_64 • AppImage universal',
+    match: (name) => /\.AppImage$/i.test(name),
   },
   'linux-deb': {
+    platform: 'linux',
     filename: 'DriveSync-Linux-x64.deb',
-    label: 'Baixar Debian/Ubuntu (.deb)',
-    strip: 'PARA LINUX · PACOTE .DEB',
-    matcher: (n) => /\.deb$/i.test(n),
+    match: (name) => /\.deb$/i.test(name),
   },
   'linux-rpm': {
+    platform: 'linux',
     filename: 'DriveSync-Linux-x64.rpm',
-    label: 'Baixar Fedora (.rpm)',
-    strip: 'PARA LINUX · PACOTE .RPM',
-    matcher: (n) => /\.rpm$/i.test(n),
+    match: (name) => /\.rpm$/i.test(name),
   },
   'linux-pacman': {
+    platform: 'linux',
     filename: 'DriveSync-Linux-x64.pacman',
-    label: 'Baixar Arch (.pacman)',
-    strip: 'PARA ARCH LINUX · PACOTE .PACMAN',
-    matcher: (n) => /\.pacman$/i.test(n),
+    match: (name) => /\.pacman$/i.test(name),
   },
   'android-apk': {
+    platform: 'android',
     filename: 'DriveSync-Android.apk',
-    label: 'Baixar para Android (.apk)',
-    strip: 'PARA ANDROID 7+ · APK INSTALÁVEL',
-    matcher: (n) => /\.apk$/i.test(n),
+    heroLabel: 'Baixar APK para Android',
+    hint: 'Android 7+ • Download direto do APK assinado',
+    baseLabel: 'Android 7+ • APK assinado',
+    match: (name) => /\.apk$/i.test(name),
   },
 };
 
-function detectPrimaryKey() {
+function detectOS() {
   const ua = (navigator.userAgent || '').toLowerCase();
-  if (ua.includes('android')) return 'android-apk';
-  if (ua.includes('win')) return 'win-exe';
-  if (ua.includes('linux') || ua.includes('x11')) return 'linux-appimage';
+  if (ua.includes('android')) return 'android';
+  if (ua.includes('win')) return 'windows';
+  if (ua.includes('linux') || ua.includes('x11')) return 'linux';
+  return 'windows';
+}
+
+function primaryKeyForOS(os) {
+  if (os === 'android') return 'android-apk';
+  if (os === 'linux') return 'linux-appimage';
   return 'win-exe';
 }
 
@@ -63,63 +70,33 @@ function formatSizeMb(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
 }
 
-function showToast(text) {
+function showToast(message) {
   const toast = document.getElementById('dl-toast');
   if (!toast) return;
-  toast.textContent = text;
+  toast.textContent = message;
   toast.classList.add('is-visible');
-  window.clearTimeout(showToast._timer);
-  showToast._timer = window.setTimeout(() => {
+  window.clearTimeout(showToast._t);
+  showToast._t = window.setTimeout(() => {
     toast.classList.remove('is-visible');
-  }, 3400);
+  }, 3200);
 }
 
-function applyTheme(theme) {
-  const root = document.documentElement;
-  const icon = document.getElementById('theme-icon');
-  if (theme === 'dark') {
-    root.setAttribute('data-theme', 'dark');
-    if (icon) {
-      icon.innerHTML =
-        '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-    }
-  } else {
-    root.removeAttribute('data-theme');
-    if (icon) {
-      icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-    }
-  }
-}
-
-function initTheme() {
-  const saved = (() => {
-    try {
-      return localStorage.getItem(THEME_KEY);
-    } catch {
-      return null;
-    }
-  })();
-  applyTheme(saved || 'light');
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const next = isDark ? 'light' : 'dark';
-    applyTheme(next);
-    try {
-      localStorage.setItem(THEME_KEY, next);
-    } catch {
-      // Ignore storage failures
-    }
-  });
-}
-
-function initOrbitalCanvas() {
-  const canvas = document.getElementById('orbital-canvas');
+/* Neon-inspired refractive vertical optical curtain in hero */
+function initLightCurtain() {
+  const canvas = document.getElementById('light-curtain');
   if (!(canvas instanceof HTMLCanvasElement)) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let angle = 0;
+  const beams = Array.from({ length: 42 }, (_, i) => ({
+    xRatio: (i + 0.5) / 42,
+    heightRatio: 0.28 + ((i * 37) % 50) / 100,
+    offsetY: ((i * 53) % 100) / 100,
+    speed: 0.0007 + ((i % 7) * 0.00022),
+    hue: i % 3 === 0 ? '34, 211, 238' : i % 3 === 1 ? '59, 130, 246' : '16, 185, 129',
+    alpha: 0.14 + ((i % 5) * 0.06),
+  }));
 
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -129,149 +106,119 @@ function initOrbitalCanvas() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   };
 
-  const drawFrame = () => {
+  let tick = 0;
+  const render = () => {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
-    const cx = w * 0.5;
-    const cy = h * 0.52;
-    const maxR = Math.max(w, h) * 0.62;
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
     ctx.clearRect(0, 0, w, h);
 
-    const rings = [0.22, 0.34, 0.48, 0.64, 0.82, 1.0];
-    rings.forEach((ratio, idx) => {
-      const r = maxR * ratio;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = isDark ? 'rgba(242,241,238,0.08)' : 'rgba(16,16,20,0.09)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+    for (const b of beams) {
+      const x = b.xRatio * w;
+      const barH = b.heightRatio * h * 0.72;
+      const phase = Math.sin(tick * b.speed * 14 + b.offsetY * Math.PI * 2);
+      const y = (h * 0.08) + ((phase + 1) * 0.5) * (h * 0.36);
 
-      const start = angle * (idx % 2 === 0 ? 1 : -0.75) + idx * 1.1;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, start, start + 0.85);
-      ctx.strokeStyle = isDark ? 'rgba(242,241,238,0.34)' : 'rgba(16,16,20,0.38)';
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
+      const grad = ctx.createLinearGradient(x, y, x, y + barH);
+      grad.addColorStop(0, `rgba(${b.hue}, 0)`);
+      grad.addColorStop(0.5, `rgba(${b.hue}, ${b.alpha})`);
+      grad.addColorStop(1, `rgba(${b.hue}, 0)`);
 
-      const px = cx + Math.cos(start + 0.85) * r;
-      const py = cy + Math.sin(start + 0.85) * r;
-      ctx.beginPath();
-      ctx.arc(px, py, 3, 0, Math.PI * 2);
-      ctx.fillStyle = idx % 2 === 0 ? '#2f7bf5' : '#02c487';
-      ctx.fill();
-    });
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, 2.2, barH);
+    }
 
     if (!reduced) {
-      angle += 0.0022;
-      window.requestAnimationFrame(drawFrame);
+      tick += 1;
+      window.requestAnimationFrame(render);
     }
   };
 
   resize();
   window.addEventListener('resize', resize);
-  drawFrame();
+  render();
 }
 
-function applyPrimaryAsset(primaryKey, assetMap) {
-  const cfg = DEFAULT_ASSETS[primaryKey] || DEFAULT_ASSETS['win-exe'];
-  const url = assetMap[primaryKey]?.url || `${LATEST_DOWNLOAD_BASE}/${cfg.filename}`;
-  const filename = assetMap[primaryKey]?.filename || cfg.filename;
-  const tag = assetMap._tag || 'v0.1.0';
+/* Pointer-tracking spotlight illumination across Bento & Download cards */
+function initSpotlightCards() {
+  const cards = Array.from(document.querySelectorAll('.spotlight-card'));
+  for (const card of cards) {
+    card.addEventListener('pointermove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty('--mx', `${x}px`);
+      card.style.setProperty('--my', `${y}px`);
+    });
+  }
+}
 
-  const heroBtn = document.getElementById('hero-dl-main');
-  const heroLabel = document.getElementById('hero-dl-label');
-  const navBtn = document.getElementById('nav-primary-dl');
-  const strip = document.getElementById('hero-os-strip');
+function applyDetectedOS(os, resolvedAssets = {}) {
+  const primaryKey = primaryKeyForOS(os);
+  const cfg = PLATFORM_ASSETS[primaryKey];
+  const resolved = resolvedAssets[primaryKey];
+  const url = resolved?.url || `${LATEST_DOWNLOAD_BASE}/${cfg.filename}`;
+  const filename = resolved?.filename || cfg.filename;
+  const tag = resolvedAssets._tag || 'v0.1.0';
+
+  const heroBtn = document.getElementById('hero-download-btn');
+  const heroLabel = document.getElementById('hero-download-label');
+  const navBtn = document.getElementById('nav-download-btn');
+  const hint = document.getElementById('hero-detected-hint');
 
   if (heroBtn) {
     heroBtn.setAttribute('href', url);
     heroBtn.setAttribute('download', filename);
   }
   if (heroLabel) {
-    heroLabel.textContent = cfg.label;
+    heroLabel.textContent = cfg.heroLabel;
   }
   if (navBtn) {
     navBtn.setAttribute('href', url);
     navBtn.setAttribute('download', filename);
   }
-  if (strip) {
-    strip.innerHTML = `${cfg.strip} · <span data-release-tag>${tag}</span>`;
+  if (hint) {
+    hint.textContent = `${cfg.hint} • ${tag}`;
   }
+
+  document.querySelectorAll('[data-platform-card]').forEach((card) => {
+    card.classList.toggle('is-recommended', card.getAttribute('data-platform-card') === os);
+  });
 }
 
-function bindDownloadTracking() {
-  document.querySelectorAll('a[data-asset-key], #hero-dl-main, #nav-primary-dl').forEach((link) => {
+function bindInteractions() {
+  document.querySelectorAll('a[data-asset-key], #hero-download-btn, #nav-download-btn').forEach((link) => {
     link.addEventListener('click', () => {
-      const name = link.getAttribute('download') || 'instalador';
-      showToast(`Iniciando download direto: ${name}`);
-    });
-  });
-}
-
-function setupMenusAndTabs() {
-  const splitToggle = document.getElementById('split-toggle');
-  const splitMenu = document.getElementById('split-menu');
-  splitToggle?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = splitMenu?.classList.toggle('is-open');
-    splitToggle.setAttribute('aria-expanded', String(Boolean(open)));
-  });
-
-  document.addEventListener('click', () => {
-    splitMenu?.classList.remove('is-open');
-    splitToggle?.setAttribute('aria-expanded', 'false');
-  });
-
-  document.querySelectorAll('[data-view-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.getAttribute('data-view-tab');
-      if (!tab) return;
-      document.querySelectorAll('[data-view-tab]').forEach((el) => {
-        el.setAttribute('aria-selected', String(el.getAttribute('data-view-tab') === tab));
-      });
-      document.querySelectorAll('[data-view-panel]').forEach((panel) => {
-        panel.classList.toggle('is-active', panel.getAttribute('data-view-panel') === tab);
-      });
+      const file = link.getAttribute('download') || 'instalador';
+      showToast(`Baixando diretamente: ${file}`);
     });
   });
 
   document.querySelectorAll('[data-copy]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      const val = btn.getAttribute('data-copy');
-      if (!val) return;
+      const text = btn.getAttribute('data-copy');
+      if (!text) return;
       try {
-        await navigator.clipboard.writeText(val);
-        showToast('Copiado para a área de transferência');
+        await navigator.clipboard.writeText(text);
+        showToast('Link copiado para a área de transferência');
       } catch {
         // Ignore clipboard errors
       }
     });
   });
-
-  window.addEventListener('scroll', () => {
-    const bar = document.getElementById('ruler-progress');
-    if (!bar) return;
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    const pct = Math.min(1, Math.max(0, window.scrollY / maxScroll));
-    const maxTravel = Math.max(40, window.innerHeight - 64);
-    bar.style.transform = `translateY(${Math.round(pct * maxTravel)}px)`;
-  });
 }
 
-async function resolveLiveRelease(primaryKey) {
+async function resolveLatestRelease(os) {
   let release = null;
   try {
     const cachedRaw = sessionStorage.getItem(CACHE_KEY);
     if (cachedRaw) {
-      const cached = JSON.parse(cachedRaw);
-      if (Date.now() - cached.savedAt < 5 * 60 * 1000) {
-        release = cached.data;
+      const parsed = JSON.parse(cachedRaw);
+      if (Date.now() - parsed.savedAt < 5 * 60 * 1000) {
+        release = parsed.data;
       }
     }
   } catch {
-    // Ignore storage failures
+    // Ignore storage read restrictions
   }
 
   if (!release) {
@@ -284,11 +231,11 @@ async function resolveLiveRelease(primaryKey) {
         try {
           sessionStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data: release }));
         } catch {
-          // Ignore storage failures
+          // Ignore storage write restrictions
         }
       }
     } catch {
-      // Offline or blocked
+      // Fallback stays on latest/download links
     }
   }
 
@@ -300,44 +247,33 @@ async function resolveLiveRelease(primaryKey) {
   });
 
   const resolvedMap = { _tag: tag };
-  Object.entries(DEFAULT_ASSETS).forEach(([key, cfg]) => {
-    const found = release.assets.find((a) => cfg.matcher(a.name || ''));
-    if (found) {
-      resolvedMap[key] = {
-        url: found.browser_download_url,
-        filename: found.name,
-        size: found.size,
-      };
-      document.querySelectorAll(`a[data-asset-key="${key}"]`).forEach((link) => {
-        link.setAttribute('href', found.browser_download_url);
-        link.setAttribute('download', found.name);
-      });
-      const sizeEl = document.querySelector(`[data-asset-size="${key}"]`);
-      if (sizeEl && found.size) {
-        const mb = formatSizeMb(found.size);
-        const suffix = key === 'win-exe' ? '.EXE' : key === 'win-msi' ? '.MSI' : key === 'android-apk' ? '.APK' : 'APPIMAGE';
-        sizeEl.textContent = `${suffix} · ${mb}`;
-      }
+  Object.entries(PLATFORM_ASSETS).forEach(([key, cfg]) => {
+    const asset = release.assets.find((item) => cfg.match(item.name || ''));
+    if (!asset) return;
+
+    resolvedMap[key] = {
+      url: asset.browser_download_url,
+      filename: asset.name,
+      size: asset.size,
+    };
+
+    document.querySelectorAll(`a[data-asset-key="${key}"]`).forEach((link) => {
+      link.setAttribute('href', asset.browser_download_url);
+      link.setAttribute('download', asset.name);
+    });
+
+    const sizeEl = document.querySelector(`[data-size-label="${key}"]`);
+    if (sizeEl && cfg.baseLabel && asset.size) {
+      sizeEl.textContent = `${cfg.baseLabel} • ${formatSizeMb(asset.size)}`;
     }
   });
 
-  applyPrimaryAsset(primaryKey, resolvedMap);
-
-  const statusText = document.getElementById('release-status-text');
-  const summaryEl = document.querySelector('[data-release-summary]');
-  if (statusText) {
-    statusText.innerHTML = `Release <strong>${tag}</strong> online com download direto para Windows, Linux e Android (${release.assets.length} arquivos).`;
-  }
-  if (summaryEl) {
-    summaryEl.textContent = `${tag} · DOWNLOAD DIRETO ATIVO`;
-  }
+  applyDetectedOS(os, resolvedMap);
 }
 
-initTheme();
-initOrbitalCanvas();
-setupMenusAndTabs();
-bindDownloadTracking();
-
-const primaryKey = detectPrimaryKey();
-applyPrimaryAsset(primaryKey, {});
-void resolveLiveRelease(primaryKey);
+const currentOS = detectOS();
+initLightCurtain();
+initSpotlightCards();
+bindInteractions();
+applyDetectedOS(currentOS);
+void resolveLatestRelease(currentOS);

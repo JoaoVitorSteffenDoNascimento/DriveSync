@@ -8,33 +8,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@118,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="topbar-left">
-        <a class="brand-cell" href="index.html">
-          <img src="assets/icon.svg" alt="" width="24" height="24" />
+    <div class="backdrop-grid" aria-hidden="true"></div>
+    <div class="backdrop-glow" aria-hidden="true"></div>
+
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a class="brand" href="index.html">
+          <img src="assets/icon.svg" alt="" width="28" height="28" style="border-radius: 7px" />
+          <span>DriveSync</span>
         </a>
-        <nav class="nav-items">
-          <a class="hud nav-link" href="index.html">Home</a>
-          <a class="hud nav-pill-active" href="privacy.html">Privacidade</a>
-          <a class="hud nav-link" href="terms.html">Termos</a>
-        </nav>
-      </div>
-      <div class="topbar-right">
-        <a class="hud cta-cell" href="index.html">Voltar aos Downloads</a>
+        <a class="btn btn-sm" href="index.html">Voltar</a>
       </div>
     </header>
 
-    <main class="doc-wrap">
+    <main class="container doc-wrap">
       <div class="doc-box">
-        <span class="hud" style="color: var(--accent-ink)">TRANSPARÊNCIA · PRIVACIDADE</span>
         <h1>Política de Privacidade — DriveSync</h1>
-        <p><strong>Última atualização:</strong> 17 de novembro de 2026</p>
+        <p style="color: var(--ink-muted)"><strong>Última atualização:</strong> 17 de novembro de 2026</p>
         <p>
           O <strong>DriveSync</strong> é um aplicativo de código aberto executado localmente no
           dispositivo do usuário para sincronizar pastas escolhidas pelo próprio usuário com o
@@ -51,7 +47,7 @@
           <li>Baixar e enviar arquivos das pastas conectadas explicitamente por você;</li>
           <li>
             Ler metadados de remetente/autor (<code>owners</code>, <code>lastModifyingUser</code>,
-            <code>sharingUser</code>) para aplicar os filtros no modo Drive Master;
+            <code>sharingUser</code>) para aplicar filtros no modo Drive Master;
           </li>
           <li>
             Gravar e ler registros simples de dispositivos conectados e códigos de convite na pasta
@@ -74,7 +70,7 @@
         <h2>3. Revogação e contato</h2>
         <p>
           Você pode desconectar sua conta dentro do app ou em
-          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">Permissões da Conta Google</a>.
+          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" style="color: var(--accent-cyan)">Permissões da Conta Google</a>.
         </p>
         <p>Contato: <code>joaovitorsteffendonascimento@gmail.com</code></p>
       </div>

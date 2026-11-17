@@ -3,770 +3,362 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DriveSync — Windows (.exe), Linux e Android (APK)</title>
+    <title>DriveSync — Sincronize seu Google Drive no Windows, Linux e Android</title>
     <meta
       name="description"
-      content="Baixe o DriveSync para Windows 10/11 (.exe), Linux e Android (.apk). Sincronização direta via Google Drive API v3, filtro por remetente na Pasta Mestre e trava de 4 GB."
+      content="Baixe o DriveSync para Windows (.exe), Linux e Android (.apk). Escolha suas pastas, filtre remetentes no Drive Master e proteja arquivos locais."
     />
-    <meta property="og:title" content="DriveSync — Downloads Diretos" />
+    <meta property="og:title" content="DriveSync — Windows (.exe), Linux e Android (.apk)" />
     <meta
       property="og:description"
-      content="Aplicativo nativo em Go e Kotlin para sincronizar pastas locais com Google Drive no Windows, Linux e Android."
+      content="Sincronização direta via Google Drive API v3 para Windows, Linux e Android."
     />
     <meta property="og:image" content="assets/logo.png" />
     <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@118,620;125,750;125,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="topbar-left">
-        <a class="brand-cell" href="#topo" aria-label="DriveSync Home">
-          <img src="assets/icon.svg" alt="" width="24" height="24" />
+    <div class="backdrop-grid" aria-hidden="true"></div>
+    <div class="backdrop-glow" aria-hidden="true"></div>
+
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a class="brand" href="#topo">
+          <img src="assets/icon.svg" alt="" width="28" height="28" style="border-radius: 7px" />
+          <span>DriveSync</span>
+          <span class="brand-version" data-release-tag>v0.1.0</span>
         </a>
-        <nav class="nav-items" aria-label="Navegação principal">
-          <a class="hud nav-pill-active" href="#topo">Home</a>
-          <a class="hud nav-link" href="#lineup">Plataformas</a>
-          <a class="hud nav-link" href="#preview">Interface</a>
-          <a class="hud nav-link" href="#principios">Princípios</a>
-          <a class="hud nav-link" href="privacy.html">Privacidade</a>
+
+        <nav class="nav-links" aria-label="Navegação principal">
+          <a href="#baixar">Baixar</a>
+          <a href="#essencial">Recursos</a>
+          <a href="privacy.html">Privacidade</a>
         </nav>
-      </div>
-
-      <div class="topbar-right">
-        <a
-          class="icon-cell"
-          href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync"
-          target="_blank"
-          rel="noreferrer"
-          title="Código-fonte no GitHub"
-          aria-label="GitHub"
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.11.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18.92-.26 1.9-.38 2.88-.39.98.01 1.96.13 2.88.39 2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.26 5.67.41.36.78 1.07.78 2.15 0 1.56-.01 2.81-.01 3.19 0 .31.21.67.79.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/>
-          </svg>
-        </a>
-
-        <button
-          id="theme-toggle"
-          type="button"
-          class="icon-cell"
-          title="Alternar tema claro / escuro"
-          aria-label="Alternar tema claro / escuro"
-        >
-          <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
 
         <a
-          id="nav-primary-dl"
-          class="hud cta-cell"
+          id="nav-download-btn"
+          class="btn btn-primary btn-sm"
           href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe"
           download="DriveSync-Setup-Windows-x64.exe"
         >
-          Baixar App
+          Baixar agora
         </a>
       </div>
     </header>
 
-    <!-- Graduated Right-Edge Drafting Ruler -->
-    <div class="ruler-rail" aria-hidden="true"></div>
-    <div id="ruler-progress" class="ruler-progress" aria-hidden="true"></div>
-    <nav class="ruler-labels" aria-label="Atalhos laterais">
-      <a href="#topo" class="hud is-active">Início</a>
-      <a href="#lineup" class="hud">Plataformas</a>
-      <a href="#preview" class="hud">Interface</a>
-      <a href="#principios" class="hud">Princípios</a>
-    </nav>
-
     <main id="topo">
-      <!-- Orbital Drafting-Board Hero -->
       <section class="hero">
-        <canvas id="orbital-canvas" aria-hidden="true"></canvas>
+        <canvas id="light-curtain" aria-hidden="true"></canvas>
 
-        <div class="hero-halo">
-          <div class="hero-wordmark">
-            <img src="assets/icon.svg" alt="" width="54" height="54" />
-            <span>DRIVESYNC</span>
+        <div class="container hero-content">
+          <div class="hero-pill">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <span>Windows, Linux e Android pela Google Drive API v3</span>
           </div>
 
-          <h1 class="hero-headline">Sincronize seu Drive sem rclone.</h1>
+          <h1>Seu Drive sincronizado sem esforço.</h1>
 
           <p class="hero-sub">
-            App nativo em Go e Kotlin para Windows 10/11, Linux e Android — escolha suas pastas,
-            filtre remetentes no Drive Master e bloqueie uploads acima de 4 GB.
+            Conecte pastas do computador e do celular ao Google Drive, filtre quem envia no modo
+            Master e evite perder arquivos já baixados.
           </p>
 
-          <div class="hero-cta-row">
-            <div class="split-btn-wrap">
-              <a
-                id="hero-dl-main"
-                class="hud split-btn-main"
-                href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe"
-                download="DriveSync-Setup-Windows-x64.exe"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                <span id="hero-dl-label">Baixar para Windows (.exe)</span>
-              </a>
+          <div class="hero-actions">
+            <a
+              id="hero-download-btn"
+              class="btn btn-primary btn-lg"
+              href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe"
+              download="DriveSync-Setup-Windows-x64.exe"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span id="hero-download-label">Baixar para Windows (.exe)</span>
+            </a>
 
-              <button
-                id="split-toggle"
-                type="button"
-                class="split-btn-chevron"
-                aria-expanded="false"
-                aria-controls="split-menu"
-                aria-label="Escolher outro formato ou plataforma"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </button>
+            <a class="btn btn-lg" href="#baixar">Outras plataformas</a>
+          </div>
 
-              <div id="split-menu" class="split-menu" role="menu">
-                <div class="hud split-menu-header">Download direto no navegador</div>
+          <div id="hero-detected-hint" class="hero-detected">
+            Windows 10/11 (x64) • Download direto do instalador .exe
+          </div>
+
+          <!-- Render / Linear Animated Pipeline -->
+          <div class="pipeline-shell">
+            <div class="pipeline-inner">
+              <div class="node-box">
+                <div class="node-top">
+                  <span class="node-tag">PC / Celular</span>
+                  <span class="node-status">Local</span>
+                </div>
+                <div class="node-title">Pasta escolhida</div>
+                <div class="node-desc">Bloqueia uploads acima de 4 GB</div>
+              </div>
+
+              <div class="flow-beam" aria-hidden="true"></div>
+
+              <div class="node-box is-highlighted">
+                <div class="node-top">
+                  <span class="node-tag">DriveSync</span>
+                  <span class="node-status">API v3</span>
+                </div>
+                <div class="node-title">Sync direto</div>
+                <div class="node-desc">Sem rclone • filtro de remetentes</div>
+              </div>
+
+              <div class="flow-beam" aria-hidden="true"></div>
+
+              <div class="node-box">
+                <div class="node-top">
+                  <span class="node-tag">Google Drive</span>
+                  <span class="node-status">Seguro</span>
+                </div>
+                <div class="node-title">Nuvem ou Master</div>
+                <div class="node-desc">Mantém cópia local se apagarem</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="baixar" class="section container">
+        <div class="section-head">
+          <h2>Baixar DriveSync</h2>
+          <p>Clique na sua plataforma para iniciar o download direto do instalador.</p>
+        </div>
+
+        <div class="download-grid">
+          <!-- Windows -->
+          <article class="spotlight-card" data-platform-card="windows">
+            <div class="card-surface">
+              <div>
+                <div class="platform-head">
+                  <div class="platform-icon-box" aria-hidden="true">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="#60a5fa">
+                      <path d="M3 5.45 10.94 4.3v7.15H3V5.45Zm8.9-1.3L21 2.8v8.65h-9.1V4.15ZM3 12.45h7.94v7.15L3 18.45v-6Zm8.9 0H21v8.65l-9.1-1.3v-7.35Z" />
+                    </svg>
+                  </div>
+                  <span class="badge-rec">Seu sistema</span>
+                </div>
+
+                <h3 class="card-title">Windows 10 / 11</h3>
+                <p class="card-desc">
+                  Instalador executável (.exe) com interface simples, bandeja do sistema e motor em Go embutido.
+                </p>
+                <div class="card-size-line" data-size-label="win-exe">x64 • Instalador .exe</div>
+              </div>
+
+              <div class="card-actions">
                 <a
-                  class="split-menu-item"
+                  class="btn btn-primary"
                   data-asset-key="win-exe"
                   href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe"
                   download="DriveSync-Setup-Windows-x64.exe"
                 >
-                  <div>
-                    <div class="split-menu-title">Windows (.exe Executável)</div>
-                    <div class="split-menu-sub">Instalador x64 recomendado</div>
-                  </div>
-                  <span class="chip">PADRÃO</span>
+                  Baixar .exe
                 </a>
-
-                <a
-                  class="split-menu-item"
-                  data-asset-key="win-msi"
-                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Windows-x64.msi"
-                  download="DriveSync-Windows-x64.msi"
-                >
-                  <div>
-                    <div class="split-menu-title">Windows (.msi)</div>
-                    <div class="split-menu-sub">Microsoft Installer x64</div>
-                  </div>
-                  <span class="chip">.MSI</span>
-                </a>
-
-                <a
-                  class="split-menu-item"
-                  data-asset-key="linux-appimage"
-                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.AppImage"
-                  download="DriveSync-Linux-x64.AppImage"
-                >
-                  <div>
-                    <div class="split-menu-title">Linux (.AppImage)</div>
-                    <div class="split-menu-sub">Universal X11 / Wayland</div>
-                  </div>
-                  <span class="chip">APPIMAGE</span>
-                </a>
-
-                <a
-                  class="split-menu-item"
-                  data-asset-key="linux-deb"
-                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.deb"
-                  download="DriveSync-Linux-x64.deb"
-                >
-                  <div>
-                    <div class="split-menu-title">Ubuntu / Debian (.deb)</div>
-                    <div class="split-menu-sub">Pacote amd64 / x64</div>
-                  </div>
-                  <span class="chip">.DEB</span>
-                </a>
-
-                <a
-                  class="split-menu-item"
-                  data-asset-key="linux-rpm"
-                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.rpm"
-                  download="DriveSync-Linux-x64.rpm"
-                >
-                  <div>
-                    <div class="split-menu-title">Fedora / RHEL (.rpm)</div>
-                    <div class="split-menu-sub">Pacote RPM x86_64</div>
-                  </div>
-                  <span class="chip">.RPM</span>
-                </a>
-
-                <a
-                  class="split-menu-item"
-                  data-asset-key="linux-pacman"
-                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.pacman"
-                  download="DriveSync-Linux-x64.pacman"
-                >
-                  <div>
-                    <div class="split-menu-title">Arch Linux (.pacman)</div>
-                    <div class="split-menu-sub">Arch / CachyOS / Endeavour</div>
-                  </div>
-                  <span class="chip">.PACMAN</span>
-                </a>
-
-                <a
-                  class="split-menu-item"
-                  data-asset-key="android-apk"
-                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk"
-                  download="DriveSync-Android.apk"
-                >
-                  <div>
-                    <div class="split-menu-title">Android (.apk)</div>
-                    <div class="split-menu-sub">Android 7+ (SAF + WorkManager)</div>
-                  </div>
-                  <span class="chip">.APK</span>
-                </a>
-              </div>
-            </div>
-
-            <a class="hud outline-btn" href="#lineup">Explorar plataformas</a>
-          </div>
-
-          <div id="hero-os-strip" class="hud hero-os-strip">
-            PARA WINDOWS 10/11 · EXECUTÁVEL .EXE (X64) · <span data-release-tag>v0.1.0</span>
-          </div>
-
-          <div class="hero-os-links">
-            <a
-              data-asset-key="win-exe"
-              href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe"
-              download="DriveSync-Setup-Windows-x64.exe"
-            >
-              Windows .exe
-            </a>
-            <a
-              data-asset-key="linux-appimage"
-              href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.AppImage"
-              download="DriveSync-Linux-x64.AppImage"
-            >
-              Linux .AppImage
-            </a>
-            <a
-              data-asset-key="android-apk"
-              href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk"
-              download="DriveSync-Android.apk"
-            >
-              Android .apk
-            </a>
-          </div>
-        </div>
-
-        <div class="hud hero-footer-strip">
-          OPEN SOURCE NO GITHUB · WINDOWS .EXE &amp; .MSI · LINUX · ANDROID APK · TRAVA DE 4 GB
-        </div>
-      </section>
-
-      <!-- Architectural 1280px Board Frame -->
-      <div class="board-frame">
-        <!-- SECTION 01: ArtCraft Lineup & Direct Browser Downloads -->
-        <section id="lineup">
-          <div class="section-bar">
-            <span class="hud">01 / DOWNLOAD DIRETO POR PLATAFORMA</span>
-            <span class="hud section-bar-right" data-release-summary>CLIQUE PARA BAIXAR NA HORA</span>
-          </div>
-
-          <div class="lineup-grid">
-            <!-- 01 Windows -->
-            <article class="lineup-card" style="--card-accent: #2f7bf5; --card-accent-ink: #1659c4">
-              <div class="card-index-row">
-                <span class="index-badge">01</span>
-                <span class="hud">DESKTOP WINDOWS</span>
-              </div>
-
-              <div class="card-shot">
-                <div class="mini-ui" aria-hidden="true">
-                  <div class="mini-ui-bar">
-                    <span>DRIVESYNC.EXE</span>
-                    <span>X64 NSIS</span>
-                  </div>
-                  <div class="mini-ui-row">
-                    <span>C:\Users\Documentos</span>
-                    <span class="mini-dot-ok">OK</span>
-                  </div>
-                  <div class="mini-ui-row">
-                    <span>DriveSync-Setup.exe</span>
-                    <span class="mini-dot-ok">PRONTO</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card-body">
-                <div class="app-square-icon" aria-hidden="true">
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 5.45 10.94 4.3v7.15H3V5.45Zm8.9-1.3L21 2.8v8.65h-9.1V4.15ZM3 12.45h7.94v7.15L3 18.45v-6Zm8.9 0H21v8.65l-9.1-1.3v-7.35Z"/>
-                  </svg>
-                </div>
-
-                <h2 class="card-title">Win<span>Sync</span></h2>
-                <p class="card-desc">
-                  Instalador executável (.exe) nativo para Windows 10 e 11 com bandeja do sistema e motor Go embutido.
-                </p>
-
-                <div class="chip-stack">
-                  <span class="chip">WINDOWS 10/11</span>
-                  <span class="chip" data-asset-size="win-exe">.EXE</span>
-                  <span class="chip" data-asset-size="win-msi">.MSI</span>
-                </div>
-
-                <div class="card-actions">
+                <div class="alt-links">
                   <a
-                    class="card-dl-link"
-                    data-asset-key="win-exe"
-                    href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe"
-                    download="DriveSync-Setup-Windows-x64.exe"
-                  >
-                    <span>Baixar Executável (.exe)</span>
-                    <span>↗</span>
-                  </a>
-                  <a
-                    class="card-sub-link"
+                    class="chip-link"
                     data-asset-key="win-msi"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Windows-x64.msi"
                     download="DriveSync-Windows-x64.msi"
                   >
-                    <span>Ou pacote corporativo (.msi)</span>
-                    <span>↗</span>
+                    Pacote .msi
                   </a>
                 </div>
               </div>
-            </article>
+            </div>
+          </article>
 
-            <!-- 02 Linux -->
-            <article class="lineup-card" style="--card-accent: #f26b1d; --card-accent-ink: #b64604">
-              <div class="card-index-row">
-                <span class="index-badge">02</span>
-                <span class="hud">DESKTOP LINUX</span>
-              </div>
-
-              <div class="card-shot">
-                <div class="mini-ui" aria-hidden="true">
-                  <div class="mini-ui-bar">
-                    <span>DRIVESYNCD</span>
-                    <span>WAYLAND + X11</span>
+          <!-- Linux -->
+          <article class="spotlight-card" data-platform-card="linux">
+            <div class="card-surface">
+              <div>
+                <div class="platform-head">
+                  <div class="platform-icon-box" aria-hidden="true">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 17 10 11 4 5" />
+                      <line x1="12" y1="19" x2="20" y2="19" />
+                    </svg>
                   </div>
-                  <div class="mini-ui-row">
-                    <span>~/Documentos ↔ Drive</span>
-                    <span class="mini-dot-ok">184 ARQ</span>
-                  </div>
-                  <div class="mini-ui-row">
-                    <span>nuvem-status.json</span>
-                    <span class="mini-dot-ok">WAYBAR</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card-body">
-                <div class="app-square-icon" aria-hidden="true">
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="4 17 10 11 4 5"/>
-                    <line x1="12" y1="19" x2="20" y2="19"/>
-                  </svg>
+                  <span class="badge-rec">Seu sistema</span>
                 </div>
 
-                <h2 class="card-title">Linux<span>Sync</span></h2>
+                <h3 class="card-title">Linux</h3>
                 <p class="card-desc">
-                  Pacotes universais e nativos com detecção de Waybar no Arch/Hyprland e inotify local.
+                  Compatível com X11 e Wayland. Funciona via AppImage universal ou pacote nativo da sua distro.
                 </p>
+                <div class="card-size-line" data-size-label="linux-appimage">x86_64 • AppImage universal</div>
+              </div>
 
-                <div class="chip-stack">
+              <div class="card-actions">
+                <a
+                  class="btn btn-primary"
+                  data-asset-key="linux-appimage"
+                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.AppImage"
+                  download="DriveSync-Linux-x64.AppImage"
+                >
+                  Baixar .AppImage
+                </a>
+                <div class="alt-links">
                   <a
-                    class="chip"
+                    class="chip-link"
                     data-asset-key="linux-deb"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.deb"
                     download="DriveSync-Linux-x64.deb"
                   >
-                    .DEB
+                    .deb
                   </a>
                   <a
-                    class="chip"
+                    class="chip-link"
                     data-asset-key="linux-rpm"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.rpm"
                     download="DriveSync-Linux-x64.rpm"
                   >
-                    .RPM
+                    .rpm
                   </a>
                   <a
-                    class="chip"
+                    class="chip-link"
                     data-asset-key="linux-pacman"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.pacman"
                     download="DriveSync-Linux-x64.pacman"
                   >
-                    .PACMAN
+                    .pacman
                   </a>
-                  <span class="chip" data-asset-size="linux-appimage">APPIMAGE</span>
-                </div>
-
-                <div class="card-actions">
-                  <a
-                    class="card-dl-link"
-                    data-asset-key="linux-appimage"
-                    href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.AppImage"
-                    download="DriveSync-Linux-x64.AppImage"
-                  >
-                    <span>Baixar .AppImage</span>
-                    <span>↗</span>
-                  </a>
-                  <button
-                    type="button"
-                    class="card-sub-link"
-                    style="background: none; border: 0"
-                    data-copy="cd packaging/arch && makepkg -si"
-                  >
-                    <span>Arch: copiar makepkg -si</span>
-                    <span>COPY</span>
-                  </button>
                 </div>
               </div>
-            </article>
+            </div>
+          </article>
 
-            <!-- 03 Android -->
-            <article class="lineup-card" style="--card-accent: #02c487; --card-accent-ink: #017a54">
-              <div class="card-index-row">
-                <span class="index-badge">03</span>
-                <span class="hud">MOBILE ANDROID</span>
-              </div>
-
-              <div class="card-shot">
-                <div class="mini-ui" aria-hidden="true">
-                  <div class="mini-ui-bar">
-                    <span>KOTLIN + SAF</span>
-                    <span>ANDROID 7+</span>
+          <!-- Android -->
+          <article class="spotlight-card" data-platform-card="android">
+            <div class="card-surface">
+              <div>
+                <div class="platform-head">
+                  <div class="platform-icon-box" aria-hidden="true">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                      <line x1="12" y1="18" x2="12" y2="18.01" />
+                    </svg>
                   </div>
-                  <div class="mini-ui-row">
-                    <span>Downloads/Equipe</span>
-                    <span class="mini-dot-ok">WI-FI</span>
-                  </div>
-                  <div class="mini-ui-row">
-                    <span>WorkManager 15m</span>
-                    <span class="mini-dot-ok">ATIVO</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card-body">
-                <div class="app-square-icon" aria-hidden="true">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="2" width="12" height="20" rx="2"/>
-                    <line x1="12" y1="18" x2="12" y2="18.01"/>
-                  </svg>
+                  <span class="badge-rec">Seu sistema</span>
                 </div>
 
-                <h2 class="card-title">Droid<span>Sync</span></h2>
+                <h3 class="card-title">Android</h3>
                 <p class="card-desc">
-                  APK nativo para escolher qualquer pasta real do celular (SAF), entrar por código e rodar em segundo plano.
+                  Aplicativo nativo em Kotlin para escolher pastas do celular (SAF), entrar por código e sincronizar via Wi-Fi.
                 </p>
+                <div class="card-size-line" data-size-label="android-apk">Android 7+ • APK assinado</div>
+              </div>
 
-                <div class="chip-stack">
-                  <span class="chip" data-asset-size="android-apk">.APK</span>
-                  <span class="chip">SAF</span>
-                  <span class="chip">SOMENTE WI-FI</span>
-                </div>
-
-                <div class="card-actions">
-                  <a
-                    class="card-dl-link"
-                    data-asset-key="android-apk"
-                    href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk"
-                    download="DriveSync-Android.apk"
-                  >
-                    <span>Baixar APK (Android)</span>
-                    <span>↗</span>
-                  </a>
+              <div class="card-actions">
+                <a
+                  class="btn btn-primary"
+                  data-asset-key="android-apk"
+                  href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk"
+                  download="DriveSync-Android.apk"
+                >
+                  Baixar .apk
+                </a>
+                <div class="alt-links">
                   <button
                     type="button"
-                    class="card-sub-link"
-                    style="background: none; border: 0"
+                    class="chip-link"
                     data-copy="https://joaovitorsteffendonascimento.github.io/DriveSync/"
                   >
-                    <span>Copiar link p/ celular</span>
-                    <span>COPY</span>
+                    Copiar link para abrir no celular
                   </button>
                 </div>
               </div>
-            </article>
-
-            <!-- 04 Drive Master -->
-            <article class="lineup-card" style="--card-accent: #8b5cf6; --card-accent-ink: #6a3fd6">
-              <div class="card-index-row">
-                <span class="index-badge">04</span>
-                <span class="hud">PASTA MESTRE</span>
-              </div>
-
-              <div class="card-shot">
-                <div class="mini-ui" aria-hidden="true">
-                  <div class="mini-ui-bar">
-                    <span>REMETENTES</span>
-                    <span>BLOCKLIST</span>
-                  </div>
-                  <div class="mini-ui-row">
-                    <span>joao@gmail.com</span>
-                    <span class="mini-dot-ok">BAIXAR</span>
-                  </div>
-                  <div class="mini-ui-row">
-                    <span>luiz@gmail.com</span>
-                    <span class="mini-dot-block">IGNORADO</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card-body">
-                <div class="app-square-icon" aria-hidden="true">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                </div>
-
-                <h2 class="card-title">Master<span>Sync</span></h2>
-                <p class="card-desc">
-                  Em pastas compartilhadas, escolha quem pode enviar para o seu aparelho e mantenha cópias locais se apagarem na nuvem.
-                </p>
-
-                <div class="chip-stack">
-                  <span class="chip">ALLOWLIST</span>
-                  <span class="chip">BLOCKLIST</span>
-                  <span class="chip">4 GB MAX</span>
-                </div>
-
-                <div class="card-actions">
-                  <a class="card-dl-link" href="#preview">
-                    <span>Testar Prévia Abaixo</span>
-                    <span>↓</span>
-                  </a>
-                  <a class="card-sub-link" href="#principios">
-                    <span>Ver garantias do motor</span>
-                    <span>↓</span>
-                  </a>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          <div class="release-strip">
-            <span id="release-status-text">
-              Downloads diretos apontando para os binários de <strong data-release-tag>v0.1.0</strong>.
-            </span>
-            <span class="hud" id="release-live-meta">API v3 • ZERO RCLONE</span>
-          </div>
-        </section>
-
-        <!-- SECTION 02: Interactive Preview Viewport -->
-        <section id="preview">
-          <div class="section-bar">
-            <span class="hud">02 / PRÉVIA INTERATIVA DO APP</span>
-            <span class="hud section-bar-right">WINDOWS · LINUX · ANDROID</span>
-          </div>
-
-          <div class="preview-section">
-            <div class="viewport-frame">
-              <div class="viewport-bar">
-                <div class="viewport-tabs" role="tablist" aria-label="Alternar tela do DriveSync">
-                  <button
-                    type="button"
-                    class="hud viewport-tab"
-                    role="tab"
-                    aria-selected="true"
-                    data-view-tab="desktop"
-                  >
-                    Desktop
-                  </button>
-                  <button
-                    type="button"
-                    class="hud viewport-tab"
-                    role="tab"
-                    aria-selected="false"
-                    data-view-tab="master"
-                  >
-                    Drive Master
-                  </button>
-                  <button
-                    type="button"
-                    class="hud viewport-tab"
-                    role="tab"
-                    aria-selected="false"
-                    data-view-tab="android"
-                  >
-                    Celular APK
-                  </button>
-                </div>
-
-                <span class="hud" style="color: #9ba5b5">ARQUITETURA SIMPLES</span>
-              </div>
-
-              <div class="viewport-body">
-                <div class="view-panel is-active" data-view-panel="desktop">
-                  <div class="mock-grid">
-                    <div class="mock-side" aria-hidden="true">
-                      <div class="mock-side-item is-active">
-                        <span>Minhas Pastas</span>
-                        <span>2</span>
-                      </div>
-                      <div class="mock-side-item">
-                        <span>Dispositivos</span>
-                        <span>3</span>
-                      </div>
-                      <div class="mock-side-item">
-                        <span>Bloqueios</span>
-                        <span>1</span>
-                      </div>
-                      <div class="mock-side-item">
-                        <span>Configurações</span>
-                      </div>
-                    </div>
-
-                    <div class="mock-rows">
-                      <div class="mock-row">
-                        <div>
-                          <strong>Documentos do Trabalho</strong>
-                          <span>~/Documentos ↔ Google Drive • Apagar no Drive mantém no PC</span>
-                        </div>
-                        <span class="mock-badge-ok">SINCRONIZADO</span>
-                      </div>
-                      <div class="mock-row">
-                        <div>
-                          <strong>Drive Master — Faculdade</strong>
-                          <span>Código DS1.1AbC...DS-A7K9-M2P4 • PC + Celular Android conectados</span>
-                        </div>
-                        <span class="mock-badge-ok">2 DISPOSITIVOS</span>
-                      </div>
-                      <div class="mock-row">
-                        <div>
-                          <strong>VideoCamera4K_6GB.mp4</strong>
-                          <span>Excede o limite fixo de 4 GB no upload e foi bloqueado antes do envio</span>
-                        </div>
-                        <span class="mock-badge-block">&gt; 4 GB BARRADO</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="view-panel" data-view-panel="master">
-                  <div class="mock-rows">
-                    <div class="mock-row">
-                      <div>
-                        <strong>joao@gmail.com</strong>
-                        <span>Enviou relatorio-final.pdf (14,2 MB) • Aprovado pela regra de remetentes</span>
-                      </div>
-                      <span class="mock-badge-ok">BAIXADO</span>
-                    </div>
-                    <div class="mock-row">
-                      <div>
-                        <strong>luiz@gmail.com</strong>
-                        <span>Enviou arquivo-pesado.zip (1,8 GB) • Ignorado somente no seu aparelho</span>
-                      </div>
-                      <span class="mock-badge-block">BLOQUEADO</span>
-                    </div>
-                    <div class="mock-row">
-                      <div>
-                        <strong>Proteção de exclusão</strong>
-                        <span>Se alguém apagar da pasta compartilhada no Drive, os já baixados continuam com você</span>
-                      </div>
-                      <span class="mock-badge-ok">KEEP_LOCAL</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="view-panel" data-view-panel="android">
-                  <div class="mock-rows">
-                    <div class="mock-row">
-                      <div>
-                        <strong>Pasta real no celular (SAF)</strong>
-                        <span>content://.../Downloads/DriveSync • Sem acesso root</span>
-                      </div>
-                      <span class="mock-badge-ok">WORKMANAGER</span>
-                    </div>
-                    <div class="mock-row">
-                      <div>
-                        <strong>Entrada rápida com código curto</strong>
-                        <span>Cole o link do Google Drive ou DS1 / DS-XXXX-XXXX</span>
-                      </div>
-                      <span class="mock-badge-ok">CONECTADO</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
-        </section>
+          </article>
+        </div>
+      </section>
 
-        <!-- SECTION 03: Architecture Principles -->
-        <section id="principios">
-          <div class="section-bar">
-            <span class="hud">03 / PRINCÍPIOS DO MOTOR</span>
-            <span class="hud section-bar-right">GO ENGINE + KOTLIN NATIVE</span>
-          </div>
+      <section id="essencial" class="section container" style="padding-top: 24px">
+        <div class="section-head">
+          <h2>Somente o essencial, bem feito</h2>
+          <p>Recursos pensados para compartilhar pastas sem dor de cabeça.</p>
+        </div>
 
-          <div class="principles-grid">
-            <div class="principle-cell">
-              <span class="hud" style="color: var(--accent-ink)">01 / SEM RCLONE</span>
-              <h3>Google Drive API v3 direta</h3>
+        <div class="bento-grid">
+          <div class="spotlight-card bento-card">
+            <div class="card-surface">
+              <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <polyline points="16 11 18 13 22 9" />
+              </svg>
+              <h3>Filtro de remetentes no Drive Master</h3>
               <p>
-                Comunicação direta pelo motor em Go no Desktop e HttpURLConnection em Kotlin no Android, sem processos externos pesados.
-              </p>
-            </div>
-
-            <div class="principle-cell">
-              <span class="hud" style="color: var(--accent-ink)">02 / SEGURANÇA</span>
-              <h3>Trava fixa de 4 GiB por arquivo</h3>
-              <p>
-                Qualquer arquivo acima de 4.294.967.296 bytes é barrado antes do envio com aviso claro na aba de bloqueios.
-              </p>
-            </div>
-
-            <div class="principle-cell">
-              <span class="hud" style="color: var(--accent-ink)">03 / PASTA MESTRE</span>
-              <h3>Filtro por remetente sem afetar outros</h3>
-              <p>
-                Bloqueie ou libere remetentes por e-mail usando os metadados reais do arquivo sem apagar nada na conta de ninguém.
-              </p>
-            </div>
-
-            <div class="principle-cell">
-              <span class="hud" style="color: var(--accent-ink)">04 / KEEP_LOCAL</span>
-              <h3>Não apaga o que já foi baixado</h3>
-              <p>
-                Por padrão, exclusões remotas mantêm sua cópia local protegida e não geram reenvio em loop na sincronização seguinte.
-              </p>
-            </div>
-
-            <div class="principle-cell">
-              <span class="hud" style="color: var(--accent-ink)">05 / CONVITES</span>
-              <h3>Códigos DS1 e DS-XXXX-XXXX</h3>
-              <p>
-                Compartilhe uma pasta em 1 clique e conecte computadores Windows, Linux e celulares Android com visibilidade em tempo real.
-              </p>
-            </div>
-
-            <div class="principle-cell">
-              <span class="hud" style="color: var(--accent-ink)">06 / LOCAL FIRST</span>
-              <h3>Seus tokens ficam só com você</h3>
-              <p>
-                Nenhum servidor intermediário armazena seus arquivos ou credenciais OAuth — tudo roda diretamente entre seu aparelho e o Google.
+                Em pastas compartilhadas, escolha de quem você quer baixar arquivos (ex.: aceitar de João e ignorar de Luiz) sem afetar o restante do grupo.
               </p>
             </div>
           </div>
-        </section>
-      </div>
+
+          <div class="spotlight-card bento-card">
+            <div class="card-surface">
+              <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <h3>Proteção contra exclusões remotas</h3>
+              <p>
+                Por padrão, o que você já baixou permanece seguro no seu computador ou celular caso alguém apague o arquivo lá no Drive.
+              </p>
+            </div>
+          </div>
+
+          <div class="spotlight-card bento-card">
+            <div class="card-surface">
+              <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <h3>Trava fixa de 4 GB no upload</h3>
+              <p>
+                Arquivos acima de 4 GiB são bloqueados automaticamente antes do envio para evitar travamentos e consumo exagerado de banda.
+              </p>
+            </div>
+          </div>
+
+          <div class="spotlight-card bento-card">
+            <div class="card-surface">
+              <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <h3>Dispositivos e convite por código</h3>
+              <p>
+                Conecte novos aparelhos em segundos com códigos DS-XXXX-XXXX ou links e acompanhe todos os PCs e celulares ligados à pasta.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
-      <div class="footer-inner">
-        <span class="hud">DRIVESYNC · WINDOWS .EXE · LINUX · ANDROID APK</span>
+      <div class="container footer-inner">
+        <div class="brand">
+          <img src="assets/icon.svg" alt="" width="22" height="22" style="border-radius: 6px" />
+          <span>DriveSync</span>
+        </div>
+
         <div class="footer-links">
-          <a class="hud" href="privacy.html">Privacidade</a>
-          <a class="hud" href="terms.html">Termos</a>
+          <a href="privacy.html">Privacidade</a>
+          <a href="terms.html">Termos de Uso</a>
           <a
-            class="hud"
             href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases"
             target="_blank"
             rel="noreferrer"
@@ -774,7 +366,6 @@
             Releases
           </a>
           <a
-            class="hud"
             href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync"
             target="_blank"
             rel="noreferrer"
@@ -785,7 +376,7 @@
       </div>
     </footer>
 
-    <div id="dl-toast" class="hud dl-toast" role="status" aria-live="polite"></div>
+    <div id="dl-toast" class="dl-toast" role="status" aria-live="polite"></div>
 
     <script src="app.js" type="module"></script>
   </body>
