@@ -613,7 +613,7 @@ function applyDetectedOS(os, resolvedAssets = {}) {
   const resolved = resolvedAssets[primaryKey];
   const url = resolved?.url || `${LATEST_DOWNLOAD_BASE}/${cfg.filename}`;
   const filename = resolved?.filename || cfg.filename;
-  const tag = resolvedAssets._tag || 'v0.5.0';
+  const tag = resolvedAssets._tag || 'v0.6.0';
 
   const heroBtn = document.getElementById('hero-download-btn');
   const heroLabel = document.getElementById('hero-download-label');
@@ -696,7 +696,7 @@ async function resolveLatestRelease(os) {
 
   if (!release || !Array.isArray(release.assets)) return;
 
-  const tag = release.tag_name || 'v0.5.0';
+  const tag = release.tag_name || 'v0.6.0';
   document.querySelectorAll('[data-release-tag]').forEach((el) => {
     el.textContent = tag;
   });

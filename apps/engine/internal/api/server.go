@@ -553,10 +553,21 @@ func (s *Server) handleFolders(w http.ResponseWriter, r *http.Request) {
 			in.OnLocalDelete = config.LocalDeleteIgnore
 		}
 
+		cleanLocal := filepath.Clean(in.LocalPath)
+		folderID := config.NewID()
+		if existing, listErr := s.store.ListFolders(); listErr == nil {
+			for _, ef := range existing {
+				if ef.RemoteFolderID == in.RemoteFolderID || filepath.Clean(ef.LocalPath) == cleanLocal {
+					folderID = ef.ID
+					break
+				}
+			}
+		}
+
 		cfg := config.SyncFolderConfig{
-			ID:               config.NewID(),
+			ID:               folderID,
 			Name:             strings.TrimSpace(in.Name),
-			LocalPath:        in.LocalPath,
+			LocalPath:        cleanLocal,
 			RemoteFolderID:   in.RemoteFolderID,
 			RemoteFolderName: in.RemoteFolderName,
 			Kind:             in.Kind,
@@ -1068,8 +1079,33 @@ func (s *Server) handleSyncDiscoveredFolders(w http.ResponseWriter, r *http.Requ
 
 	existingFolders, _ := s.store.ListFolders()
 	connectedRemote := make(map[string]struct{}, len(existingFolders))
+	connectedLocal := make(map[string]struct{}, len(existingFolders))
 	for _, f := range existingFolders {
 		connectedRemote[f.RemoteFolderID] = struct{}{}
+		connectedLocal[filepath.Clean(f.LocalPath)] = struct{}{}
+	}
+
+	pendingCount := 0
+	for _, item := range body.Folders {
+		if item.RemoteFolderID == "" {
+			continue
+		}
+		if _, exists := connectedRemote[item.RemoteFolderID]; !exists {
+			pendingCount++
+		}
+	}
+	singleTarget := pendingCount == 1
+
+	var driveCli drive.API
+	driveCliLoaded := false
+	getDriveCli := func() drive.API {
+		if !driveCliLoaded {
+			driveCliLoaded = true
+			if cli, err := s.currentDriveClient(r.Context()); err == nil {
+				driveCli = cli
+			}
+		}
+		return driveCli
 	}
 
 	createdList := make([]config.SyncFolderConfig, 0, len(body.Folders))
@@ -1084,8 +1120,12 @@ func (s *Server) handleSyncDiscoveredFolders(w http.ResponseWriter, r *http.Requ
 		if cleanName == "" {
 			cleanName = "DriveSync-" + item.RemoteFolderID[:min(6, len(item.RemoteFolderID))]
 		}
-		targetLocal := filepath.Join(basePath, cleanName)
-		if err := os.MkdirAll(targetLocal, 0o755); err != nil {
+		targetLocal := resolveSmartLocalFolderPath(r.Context(), basePath, cleanName, item.RemoteFolderID, singleTarget, connectedLocal, getDriveCli)
+		cleanTarget := filepath.Clean(targetLocal)
+		if _, dupLocal := connectedLocal[cleanTarget]; dupLocal {
+			continue
+		}
+		if err := os.MkdirAll(cleanTarget, 0o755); err != nil {
 			writeErr(w, http.StatusBadRequest, "não foi possível criar pasta local: "+err.Error())
 			return
 		}
@@ -1118,7 +1158,7 @@ func (s *Server) handleSyncDiscoveredFolders(w http.ResponseWriter, r *http.Requ
 		cfg := config.SyncFolderConfig{
 			ID:               config.NewID(),
 			Name:             cleanName,
-			LocalPath:        targetLocal,
+			LocalPath:        cleanTarget,
 			RemoteFolderID:   item.RemoteFolderID,
 			RemoteFolderName: item.RemoteFolderName,
 			Kind:             kind,
@@ -1134,6 +1174,7 @@ func (s *Server) handleSyncDiscoveredFolders(w http.ResponseWriter, r *http.Requ
 		}
 		createdList = append(createdList, cfg)
 		connectedRemote[item.RemoteFolderID] = struct{}{}
+		connectedLocal[cleanTarget] = struct{}{}
 	}
 	s.reloadWatcher()
 	for _, cfg := range createdList {
@@ -1260,4 +1301,115 @@ func copyFileAtomic(src, dst string) error {
 	}
 	cleanup = false
 	return nil
+}
+
+// resolveSmartLocalFolderPath evita criar subpastas duplicadas como ".../Teste/Teste"
+// e reaproveita pastas locais existentes quando já têm o mesmo nome ou arquivos do Drive.
+func resolveSmartLocalFolderPath(
+	ctx context.Context,
+	basePath string,
+	cleanName string,
+	remoteFolderID string,
+	singleTarget bool,
+	connectedLocal map[string]struct{},
+	getDriveCli func() drive.API,
+) string {
+	cleanBase := filepath.Clean(basePath)
+	if strings.EqualFold(filepath.Base(cleanBase), cleanName) {
+		return cleanBase
+	}
+
+	hasMarker := false
+	if entries, err := os.ReadDir(cleanBase); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() && strings.EqualFold(entry.Name(), cleanName) {
+				return filepath.Join(cleanBase, entry.Name())
+			}
+			if entry.Name() == config.ControlDirName {
+				hasMarker = true
+			}
+		}
+	}
+
+	if _, alreadyUsed := connectedLocal[cleanBase]; !alreadyUsed {
+		if hasMarker && singleTarget {
+			return cleanBase
+		}
+		if cli := getDriveCli(); cli != nil {
+			if remoteEntries, err := listTreeSafe(ctx, cli, remoteFolderID); err == nil && len(remoteEntries) > 0 {
+				if folderHasMatchingRemoteFiles(cleanBase, remoteEntries) {
+					return cleanBase
+				}
+			}
+		}
+	}
+
+	return filepath.Join(cleanBase, cleanName)
+}
+
+func listTreeSafe(ctx context.Context, cli drive.API, remoteFolderID string) ([]drive.RemoteEntry, error) {
+	entries, _, err := cli.ListTree(ctx, remoteFolderID)
+	return entries, err
+}
+
+func folderHasMatchingRemoteFiles(rootDir string, remoteEntries []drive.RemoteEntry) bool {
+	remoteByRel := make(map[string]drive.RemoteEntry, len(remoteEntries))
+	remoteByName := make(map[string]drive.RemoteEntry, len(remoteEntries))
+	for _, re := range remoteEntries {
+		if re.IsDir || config.ShouldIgnore(re.RelativePath) {
+			continue
+		}
+		remoteByRel[strings.ToLower(re.RelativePath)] = re
+		base := strings.ToLower(filepath.Base(filepath.FromSlash(re.RelativePath)))
+		if _, exists := remoteByName[base]; !exists {
+			remoteByName[base] = re
+		}
+	}
+	if len(remoteByRel) == 0 {
+		return false
+	}
+
+	matched := false
+	scanned := 0
+	const maxScan = 500
+	errDone := errors.New("match_found")
+
+	_ = filepath.WalkDir(rootDir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if p != rootDir && (name == config.ControlDirName || name == config.QuarantineDirName || strings.HasPrefix(name, ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		scanned++
+		if scanned > maxScan {
+			return errDone
+		}
+		rel, relErr := filepath.Rel(rootDir, p)
+		if relErr != nil {
+			return nil
+		}
+		relSlash := filepath.ToSlash(rel)
+		if config.ShouldIgnore(relSlash) {
+			return nil
+		}
+		info, statErr := d.Info()
+		if statErr != nil {
+			return nil
+		}
+		if re, ok := remoteByRel[strings.ToLower(relSlash)]; ok && (re.Size <= 0 || re.Size == info.Size()) {
+			matched = true
+			return errDone
+		}
+		if re, ok := remoteByName[strings.ToLower(d.Name())]; ok && re.Size > 0 && re.Size == info.Size() {
+			matched = true
+			return errDone
+		}
+		return nil
+	})
+	return matched
 }

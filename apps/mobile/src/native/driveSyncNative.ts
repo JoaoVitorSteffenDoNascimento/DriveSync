@@ -85,6 +85,7 @@ export interface DriveSyncNativePlugin {
     downloadUrl?: string;
     version?: string;
   }): Promise<{ started: boolean; mode?: string }>;
+  uninstallApp(): Promise<{ started: boolean }>;
   addListener?: (
     eventName: 'authUrlReady',
     listenerFunc: (data: { authUrl: string }) => void,
@@ -333,5 +334,8 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
           'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk';
         window.open(url, '_blank', 'noopener,noreferrer');
         return { started: true, mode: 'browser_download' };
+      },
+      async uninstallApp() {
+        return { started: true };
       },
     };

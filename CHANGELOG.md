@@ -2,6 +2,18 @@
 
 Todas as alterações relevantes do **DriveSync** são documentadas neste arquivo seguindo os padrões [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e [Semantic Versioning 2.0.0](https://semver.org/lang/pt-BR/).
 
+## [0.6.0] - 2026-11-18
+
+### Adicionado
+- **Botão de desinstalar integrado no app e desinstalador nativo no Linux**:
+  - Card **Desinstalar DriveSync** na aba **Configurações** (Desktop Windows/Linux e Mobile Android) com confirmação de segurança, opção para manter ou apagar os dados locais de login/configuração e garantia de preservação das pastas de arquivos sincronizados.
+  - Ação `[Desktop Action Uninstall]` (**Desinstalar DriveSync**) adicionada aos arquivos `.desktop` no Linux (`install-local-linux.sh` e `packaging/arch/drivesync.desktop`), permitindo desinstalar clicando com o botão direito no ícone do menu ou rodando `drivesync --uninstall` / `drivesync-uninstall`.
+  - Suporte completo no Electron Desktop (`main.ts`) para remoção da instalação local (`~/.local/share/drivesync`), `.AppImage` (`process.env.APPIMAGE`), atalhos e pacotes do sistema (`/opt/DriveSync` / `/usr/lib/drivesync` via `pkexec` com `pacman`/`apt-get`/`dnf`/`rpm`), além de acionamento do desinstalador do Windows e `Intent.ACTION_DELETE` no Android (`DriveSyncPlugin.uninstallApp`).
+- **Detecção inteligente de pastas existentes e reconciliação de arquivos sem duplicação (Desktop e Android)**:
+  - Seleção de pasta já existente com o mesmo nome (ex.: escolher diretamente `Teste` ao reconectar a pasta `Teste`), subpasta com variação de maiúsculas/minúsculas ou diretório já contendo `.drivesync`/arquivos correspondentes do Drive é reaproveitada diretamente sem criar subpastas aninhadas como `Teste/Teste`.
+  - Na primeira sincronização, arquivos locais idênticos (mesmo MD5 ou mesmo tamanho quando o MD5 remoto estiver ausente, com busca case-insensitive) são pareados imediatamente no banco local sem baixar de novo e sem gerar cópias `.conflict-*`.
+  - Subpastas auto-aninhadas redundantes (`<Pasta>/<arquivo>`) com conteúdo duplicado em relação à raiz ou ao Drive são limpas/movidas com segurança e nunca reenviadas em duplicidade (`findChildItem` no motor Go e `findFileInFolder` no cliente Android).
+
 ## [0.5.0] - 2026-11-18
 
 ### Adicionado

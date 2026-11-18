@@ -211,6 +211,7 @@ function makeMockBridge(snap: MobileSnapshot): DriveSyncNativePlugin {
       checkedAt: '2026-11-18T00:00:00Z',
     }),
     downloadAndInstallUpdate: vi.fn().mockResolvedValue({ started: true, mode: 'apk_installer' }),
+    uninstallApp: vi.fn().mockResolvedValue({ started: true }),
   };
 }
 
@@ -331,6 +332,13 @@ describe('MobileApp', () => {
     expect(container.textContent).toContain('4,00 GB');
     expect(container.textContent).toContain('Intervalo de checagem de novidades no Drive (segundos)');
     expect(container.textContent).toContain('Iniciar DriveSync automaticamente ao ligar o celular');
+    expect(container.textContent).toContain('Desinstalar DriveSync');
+    const mobileUninstallBtn = findButton(container, 'Desinstalar aplicativo');
+    expect(mobileUninstallBtn).toBeDefined();
+    await act(async () => {
+      mobileUninstallBtn?.click();
+    });
+    expect(bridge.uninstallApp).toHaveBeenCalledTimes(1);
   });
 
   it('abre modal limpo de login Google Drive sem expor chaves OAuth e inicia autenticação', async () => {

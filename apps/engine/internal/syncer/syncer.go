@@ -266,6 +266,9 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 		return err
 	}
 
+	cleanSelfNestedDuplicates(folder, localMap, remoteMap)
+	reconcileLocalCaseKeys(localMap, remoteMap)
+
 	stateMap, err := s.store.GetSyncedFiles(folder.ID)
 	if err != nil {
 		msg := fmt.Sprintf("Erro ao ler banco local: %v", err)
@@ -326,6 +329,7 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 	blocked4gb := 0
 	ignoredSenders := 0
 	hadErrors := 0
+	reconciledCount := 0
 	var lastErr string
 
 	for relPath := range allPaths {
@@ -485,7 +489,7 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 					lastErr = err.Error()
 					continue
 				}
-				if rem.MD5 != "" && strings.EqualFold(locHash, rem.MD5) {
+				if (rem.MD5 != "" && strings.EqualFold(locHash, rem.MD5)) || (rem.MD5 == "" && loc.Size == rem.Size) {
 					_ = s.store.UpsertSyncedFile(db.SyncedFileRecord{
 						FolderID:      folder.ID,
 						RelativePath:  relPath,
@@ -499,6 +503,7 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 						AuthorName:    rem.AuthorName,
 						Origin:        "remote",
 					})
+					reconciledCount++
 					continue
 				}
 				// Conteúdo diferente no pareamento inicial -> preserva cópia perdedora
@@ -639,6 +644,8 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 	} else if blocked4gb > 0 {
 		finalStatus = "warning"
 		finalMsg = fmt.Sprintf("Sincronizado (%d arquivo(s) acima de 4 GB bloqueado(s))", blocked4gb)
+	} else if reconciledCount > 0 {
+		finalMsg = fmt.Sprintf("Tudo sincronizado (%d arquivo(s) já existente(s) aproveitado(s))", reconciledCount)
 	}
 
 	s.setRuntime(config.FolderRuntimeState{
@@ -956,5 +963,154 @@ func mapLegacyStatus(st string) string {
 		return "syncing"
 	default:
 		return "error"
+	}
+}
+
+// cleanSelfNestedDuplicates remove cópias duplicadas do tipo "<NomeDaPasta>/arquivo"
+// quando o arquivo já existe na raiz local ou remota, evitando duplicação 2x/3x em cascata.
+func cleanSelfNestedDuplicates(folder config.SyncFolderConfig, localMap map[string]localFile, remoteMap map[string]drive.RemoteEntry) {
+	candSet := make(map[string]struct{}, 3)
+	for _, raw := range []string{folder.Name, folder.RemoteFolderName, filepath.Base(filepath.Clean(folder.LocalPath))} {
+		clean := strings.ToLower(strings.TrimSpace(raw))
+		if clean != "" && clean != "." && clean != string(filepath.Separator) {
+			candSet[clean] = struct{}{}
+		}
+	}
+	if len(candSet) == 0 {
+		return
+	}
+
+	remoteByLower := make(map[string]drive.RemoteEntry, len(remoteMap))
+	for k, v := range remoteMap {
+		remoteByLower[strings.ToLower(k)] = v
+	}
+	localByLower := make(map[string]localFile, len(localMap))
+	for k, v := range localMap {
+		localByLower[strings.ToLower(k)] = v
+	}
+
+	keys := make([]string, 0, len(localMap))
+	for k := range localMap {
+		keys = append(keys, k)
+	}
+
+	for _, nestedRel := range keys {
+		nestedLoc, exists := localMap[nestedRel]
+		if !exists {
+			continue
+		}
+		if _, existsRemote := remoteMap[nestedRel]; existsRemote {
+			continue
+		}
+		if _, existsRemoteFold := remoteByLower[strings.ToLower(nestedRel)]; existsRemoteFold {
+			continue
+		}
+
+		trimmed := nestedRel
+		stripped := false
+		for {
+			parts := strings.SplitN(trimmed, "/", 2)
+			if len(parts) < 2 {
+				break
+			}
+			if _, match := candSet[strings.ToLower(parts[0])]; !match {
+				break
+			}
+			trimmed = parts[1]
+			stripped = true
+		}
+		if !stripped || trimmed == "" {
+			continue
+		}
+
+		rootLoc, hasRootLocal := localMap[trimmed]
+		if !hasRootLocal {
+			rootLoc, hasRootLocal = localByLower[strings.ToLower(trimmed)]
+		}
+		if hasRootLocal && rootLoc.AbsPath != nestedLoc.AbsPath && rootLoc.Size == nestedLoc.Size {
+			hRoot, err1 := fileMD5(rootLoc.AbsPath)
+			hNested, err2 := fileMD5(nestedLoc.AbsPath)
+			if err1 == nil && err2 == nil && strings.EqualFold(hRoot, hNested) {
+				oldDir := filepath.Dir(nestedLoc.AbsPath)
+				if os.Remove(nestedLoc.AbsPath) == nil {
+					pruneEmptyParentDirs(oldDir, folder.LocalPath)
+					delete(localMap, nestedRel)
+				}
+			}
+			continue
+		}
+
+		if !hasRootLocal {
+			rootRem, hasRootRemote := remoteMap[trimmed]
+			if !hasRootRemote {
+				rootRem, hasRootRemote = remoteByLower[strings.ToLower(trimmed)]
+			}
+			if hasRootRemote && rootRem.Size == nestedLoc.Size {
+				matches := rootRem.MD5 == ""
+				if !matches {
+					if hNested, err := fileMD5(nestedLoc.AbsPath); err == nil {
+						matches = strings.EqualFold(hNested, rootRem.MD5)
+					}
+				}
+				if matches {
+					destAbs := filepath.Join(folder.LocalPath, filepath.FromSlash(rootRem.RelativePath))
+					if os.MkdirAll(filepath.Dir(destAbs), 0o755) == nil && os.Rename(nestedLoc.AbsPath, destAbs) == nil {
+						oldDir := filepath.Dir(nestedLoc.AbsPath)
+						pruneEmptyParentDirs(oldDir, folder.LocalPath)
+						delete(localMap, nestedRel)
+						nestedLoc.AbsPath = destAbs
+						nestedLoc.RelPath = rootRem.RelativePath
+						localMap[rootRem.RelativePath] = nestedLoc
+						localByLower[strings.ToLower(rootRem.RelativePath)] = nestedLoc
+					}
+				}
+			}
+		}
+	}
+}
+
+func pruneEmptyParentDirs(dir string, stopRoot string) {
+	cleanRoot := filepath.Clean(stopRoot)
+	curr := filepath.Clean(dir)
+	for curr != cleanRoot && strings.HasPrefix(curr, cleanRoot+string(filepath.Separator)) {
+		entries, err := os.ReadDir(curr)
+		if err != nil || len(entries) > 0 {
+			break
+		}
+		if os.Remove(curr) != nil {
+			break
+		}
+		curr = filepath.Dir(curr)
+	}
+}
+
+// reconcileLocalCaseKeys alinha chaves locais que diferem apenas por maiúsculas/minúsculas das chaves no Drive.
+func reconcileLocalCaseKeys(localMap map[string]localFile, remoteMap map[string]drive.RemoteEntry) {
+	localByLower := make(map[string]string, len(localMap))
+	for k := range localMap {
+		lower := strings.ToLower(k)
+		if _, exists := localByLower[lower]; !exists {
+			localByLower[lower] = k
+		}
+	}
+	for remRel := range remoteMap {
+		if _, exact := localMap[remRel]; exact {
+			continue
+		}
+		locKey, ok := localByLower[strings.ToLower(remRel)]
+		if !ok || locKey == remRel {
+			continue
+		}
+		if _, remoteOwnsLoc := remoteMap[locKey]; remoteOwnsLoc {
+			continue
+		}
+		locVal, stillThere := localMap[locKey]
+		if !stillThere {
+			continue
+		}
+		locVal.RelPath = remRel
+		localMap[remRel] = locVal
+		delete(localMap, locKey)
+		delete(localByLower, strings.ToLower(remRel))
 	}
 }

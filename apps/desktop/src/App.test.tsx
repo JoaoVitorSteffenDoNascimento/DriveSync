@@ -226,6 +226,10 @@ describe('App UI DriveSync', () => {
       mode: 'appimage_relaunch',
       detail: 'Reiniciando...',
     });
+    const uninstallApp = vi.fn().mockResolvedValue({
+      started: true,
+      detail: 'Desinstalação iniciada.',
+    });
 
     window.driveSyncDesktop = {
       getDaemonConnection: vi.fn(),
@@ -249,6 +253,7 @@ describe('App UI DriveSync', () => {
       }),
       installUpdate,
       onUpdateAvailable: () => () => {},
+      uninstallApp,
     };
 
     try {
@@ -268,6 +273,30 @@ describe('App UI DriveSync', () => {
       expect(installUpdate).toHaveBeenCalledWith(
         'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/download/v0.5.0/DriveSync-Linux-x64.AppImage',
       );
+
+      // Abre Configurações e valida o fluxo de desinstalação com confirmação
+      const settingsBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('button.nav-btn')).find((b) =>
+        b.textContent?.includes('Configurações'),
+      );
+      await act(async () => {
+        settingsBtn!.click();
+      });
+      expect(container.textContent).toContain('Desinstalar DriveSync');
+      const uninstallBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Desinstalar aplicativo'),
+      );
+      expect(uninstallBtn).toBeDefined();
+      await act(async () => {
+        uninstallBtn!.click();
+      });
+      const confirmBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Confirmar desinstalação'),
+      );
+      expect(confirmBtn).toBeDefined();
+      await act(async () => {
+        confirmBtn!.click();
+      });
+      expect(uninstallApp).toHaveBeenCalledWith({ purgeData: false });
     } finally {
       delete window.driveSyncDesktop;
       await act(async () => {

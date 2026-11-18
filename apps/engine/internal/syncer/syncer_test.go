@@ -29,6 +29,8 @@ type mockDrive struct {
 	controlFiles map[string]map[string][]byte // rootID -> name -> bytes
 	nextID       int
 	canWriteRoot bool
+	downloads    int
+	uploads      int
 }
 
 func newMockDrive() *mockDrive {
@@ -133,6 +135,9 @@ func (m *mockDrive) ListTree(context.Context, string) ([]drive.RemoteEntry, bool
 func (m *mockDrive) DownloadFile(_ context.Context, fileID, destPath string, _ int64, _ drive.ProgressFunc) (string, error) {
 	m.mu.Lock()
 	obj, ok := m.filesByID[fileID]
+	if ok {
+		m.downloads++
+	}
 	m.mu.Unlock()
 	if !ok {
 		return "", fmt.Errorf("file %s not found", fileID)
@@ -167,6 +172,7 @@ func (m *mockDrive) UploadFile(_ context.Context, localPath, remoteName, parentI
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.uploads++
 	id := existingFileID
 	if id == "" {
 		m.nextID++
@@ -532,5 +538,126 @@ func TestSubfolderRemovedFromDriveStaysOnPCWithoutReupload(t *testing.T) {
 	entries, _, _ := md.ListTree(context.Background(), folder.RemoteFolderID)
 	if len(entries) != 0 {
 		t.Fatalf("pasta removida do Drive não deveria subir novamente, mas encontrou: %+v", entries)
+	}
+}
+
+func TestReconcileExistingFolderWithoutDuplicatesOrRedownload(t *testing.T) {
+	store, md, sy, _ := setupTestEnv(t)
+	tmp := t.TempDir()
+	testeDir := filepath.Join(tmp, "Teste")
+	if err := os.MkdirAll(testeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	folder := config.SyncFolderConfig{
+		ID:               "existing-1",
+		Name:             "Teste",
+		LocalPath:        testeDir,
+		RemoteFolderID:   "rem-teste",
+		RemoteFolderName: "Teste",
+		Kind:             config.FolderKindPersonal,
+		Direction:        config.DirectionBidirectional,
+		OnRemoteDelete:   config.RemoteDeleteKeepLocal,
+		OnLocalDelete:    config.LocalDeleteIgnore,
+		SenderPolicy:     config.SenderPolicy{Mode: config.SenderModeAll, UnknownSenderAction: "allow"},
+	}
+	if err := store.UpsertFolder(folder); err != nil {
+		t.Fatal(err)
+	}
+
+	// Drive já tem 3 arquivos, inclusive "Foto.JPG" com caixa diferente
+	md.addRemoteFile("doc1.txt", []byte("mesmo-conteudo-doc1"), "brendha@gmail.com", "Brendha")
+	md.addRemoteFile("Foto.JPG", []byte("mesma-foto-bytes"), "brendha@gmail.com", "Brendha")
+	md.addRemoteFile("falta-aqui.txt", []byte("apenas-no-drive"), "brendha@gmail.com", "Brendha")
+
+	// Celular/PC já tem 2 deles na pasta local "Teste" antes mesmo de parear
+	if err := os.WriteFile(filepath.Join(testeDir, "doc1.txt"), []byte("mesmo-conteudo-doc1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(testeDir, "foto.jpg"), []byte("mesma-foto-bytes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := sy.SyncFolder(context.Background(), folder.ID); err != nil {
+		t.Fatalf("SyncFolder falhou: %v", err)
+	}
+
+	if md.downloads != 1 {
+		t.Fatalf("esperava baixar somente 1 arquivo faltante (falta-aqui.txt), downloads=%d", md.downloads)
+	}
+	if md.uploads != 0 {
+		t.Fatalf("não deveria reenviar arquivos já existentes, uploads=%d", md.uploads)
+	}
+
+	gotMissing, err := os.ReadFile(filepath.Join(testeDir, "falta-aqui.txt"))
+	if err != nil || string(gotMissing) != "apenas-no-drive" {
+		t.Fatalf("arquivo faltante não baixado corretamente: data=%q err=%v", string(gotMissing), err)
+	}
+
+	entries, _ := os.ReadDir(testeDir)
+	for _, e := range entries {
+		if strings.Contains(e.Name(), ".conflict-") {
+			t.Fatalf("não deveria criar cópia de conflito em arquivo idêntico: %s", e.Name())
+		}
+	}
+
+	state, err := store.GetSyncedFiles(folder.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state) != 3 {
+		t.Fatalf("esperava 3 registros pareados/sincronizados, obtido %d: %+v", len(state), state)
+	}
+}
+
+func TestCleanSelfNestedDuplicatesPreventsCascadingCopies(t *testing.T) {
+	store, md, sy, _ := setupTestEnv(t)
+	tmp := t.TempDir()
+	testeDir := filepath.Join(tmp, "Teste")
+	if err := os.MkdirAll(filepath.Join(testeDir, "Teste", "Teste", "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	folder := config.SyncFolderConfig{
+		ID:               "nested-1",
+		Name:             "Teste",
+		LocalPath:        testeDir,
+		RemoteFolderID:   "rem-nested",
+		RemoteFolderName: "Teste",
+		Kind:             config.FolderKindPersonal,
+		Direction:        config.DirectionBidirectional,
+		OnRemoteDelete:   config.RemoteDeleteKeepLocal,
+		OnLocalDelete:    config.LocalDeleteIgnore,
+		SenderPolicy:     config.SenderPolicy{Mode: config.SenderModeAll, UnknownSenderAction: "allow"},
+	}
+	if err := store.UpsertFolder(folder); err != nil {
+		t.Fatal(err)
+	}
+
+	md.addRemoteFile("foto.png", []byte("img-bytes"), "brendha@gmail.com", "Brendha")
+	md.addRemoteFile("sub/relatorio.pdf", []byte("pdf-bytes"), "brendha@gmail.com", "Brendha")
+
+	// Raiz já tem foto.png, mas também tem cópia aninhada Teste/foto.png e Teste/Teste/sub/relatorio.pdf
+	_ = os.WriteFile(filepath.Join(testeDir, "foto.png"), []byte("img-bytes"), 0o644)
+	_ = os.WriteFile(filepath.Join(testeDir, "Teste", "foto.png"), []byte("img-bytes"), 0o644)
+	_ = os.WriteFile(filepath.Join(testeDir, "Teste", "Teste", "sub", "relatorio.pdf"), []byte("pdf-bytes"), 0o644)
+
+	if err := sy.SyncFolder(context.Background(), folder.ID); err != nil {
+		t.Fatalf("SyncFolder falhou: %v", err)
+	}
+
+	if md.downloads != 0 || md.uploads != 0 {
+		t.Fatalf("não deveria baixar nem subir duplicados, downloads=%d uploads=%d", md.downloads, md.uploads)
+	}
+	if _, err := os.Stat(filepath.Join(testeDir, "Teste")); !os.IsNotExist(err) {
+		t.Fatalf("subpasta redundante Teste/ deveria ter sido removida após limpar duplicados, err=%v", err)
+	}
+	gotPDF, err := os.ReadFile(filepath.Join(testeDir, "sub", "relatorio.pdf"))
+	if err != nil || string(gotPDF) != "pdf-bytes" {
+		t.Fatalf("relatorio.pdf deveria ter sido movido para a raiz sub/, data=%q err=%v", string(gotPDF), err)
+	}
+	remoteEntries, _, _ := md.ListTree(context.Background(), folder.RemoteFolderID)
+	if len(remoteEntries) != 2 {
+		t.Fatalf("esperava apenas 2 arquivos no Drive, obtido %+v", remoteEntries)
 	}
 }

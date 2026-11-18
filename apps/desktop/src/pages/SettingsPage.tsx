@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Share2,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import type {
   AppSettings,
@@ -52,6 +53,10 @@ export const SettingsPage: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [confirmUninstall, setConfirmUninstall] = useState(false);
+  const [purgeOnUninstall, setPurgeOnUninstall] = useState(false);
+  const [uninstalling, setUninstalling] = useState(false);
+  const [uninstallStatus, setUninstallStatus] = useState<string | null>(null);
 
   const handleCopyShareLink = async () => {
     try {
@@ -367,6 +372,97 @@ export const SettingsPage: React.FC<Props> = ({
             <ExternalLink size={15} /> GitHub Releases
           </a>
         </div>
+      </div>
+
+      <div className="card" style={{ borderColor: 'rgba(239, 68, 68, 0.35)' }}>
+        <div className="row-inline" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div className="row-inline" style={{ gap: 8 }}>
+              <Trash2 size={17} color="#ef4444" />
+              <strong style={{ fontSize: 15 }}>Desinstalar DriveSync</strong>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+              Remove o aplicativo, atalhos do menu e inicialização automática deste computador.
+              Suas pastas e arquivos já sincronizados no PC e no Google Drive não serão apagados.
+            </p>
+            {uninstallStatus && (
+              <div style={{ fontSize: 12.5, color: 'var(--primary)', marginTop: 8 }}>
+                {uninstallStatus}
+              </div>
+            )}
+          </div>
+
+          {!confirmUninstall && (
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              disabled={uninstalling}
+              onClick={() => setConfirmUninstall(true)}
+            >
+              <Trash2 size={14} /> Desinstalar aplicativo
+            </button>
+          )}
+        </div>
+
+        {confirmUninstall && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: 12,
+              borderRadius: 10,
+              background: 'var(--surface-muted)',
+            }}
+          >
+            <label className="row-inline" style={{ cursor: 'pointer', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={purgeOnUninstall}
+                onChange={(e) => setPurgeOnUninstall(e.target.checked)}
+              />
+              <span>Apagar também os dados locais da conta e configurações deste computador</span>
+            </label>
+
+            <div className="row-inline" style={{ marginTop: 12, gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={uninstalling}
+                onClick={() => setConfirmUninstall(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={uninstalling}
+                onClick={async () => {
+                  setUninstalling(true);
+                  setUninstallStatus(null);
+                  try {
+                    if (window.driveSyncDesktop?.uninstallApp) {
+                      const res = await window.driveSyncDesktop.uninstallApp({
+                        purgeData: purgeOnUninstall,
+                      });
+                      setUninstallStatus(res.detail);
+                    } else {
+                      setUninstallStatus(
+                        'No Linux, execute ~/.local/bin/drivesync-uninstall para concluir a remoção.',
+                      );
+                    }
+                  } catch (err) {
+                    setUninstallStatus(
+                      err instanceof Error ? err.message : 'Não foi possível iniciar a desinstalação.',
+                    );
+                    setUninstalling(false);
+                  }
+                }}
+              >
+                <Trash2 size={14} />
+                {uninstalling ? 'Desinstalando...' : 'Confirmar desinstalação'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

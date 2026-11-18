@@ -95,6 +95,7 @@ class MobileSyncEngine(
         val settings = db.getSettings()
         val existing = db.listFolders()
         val connectedRemote = existing.map { it.remoteFolderId }.toMutableSet()
+        val connectedLocal = existing.map { it.localPath.trimEnd('/') }.toMutableSet()
         val created = mutableListOf<SyncFolderConfig>()
 
         for (item in targets) {
@@ -104,11 +105,17 @@ class MobileSyncEngine(
                 .replace('\\', '-')
                 .trim()
                 .ifBlank { "Pasta-${item.remoteFolderId.take(6)}" }
-            val destDoc = if (createSubfolders) {
-                findOrCreateChildDir(rootDoc, cleanName)
-                    ?: throw IllegalStateException("Não foi possível criar subpasta $cleanName no celular.")
-            } else {
-                rootDoc
+            val destDoc = resolveTargetFolderDoc(
+                rootDoc = rootDoc,
+                cleanName = cleanName,
+                remoteFolderId = item.remoteFolderId,
+                createSubfolders = createSubfolders,
+                singleTarget = targets.size == 1
+            )
+            val destUriKey = destDoc.uri.toString().trimEnd('/')
+            if (connectedLocal.contains(destUriKey)) {
+                connectedRemote.add(item.remoteFolderId)
+                continue
             }
             val policy = item.senderPolicy ?: SenderPolicy(
                 mode = if (item.kind == "master") "blocklist" else "all",
@@ -133,11 +140,63 @@ class MobileSyncEngine(
             val saved = db.upsertFolder(cfg)
             created.add(saved)
             connectedRemote.add(item.remoteFolderId)
+            connectedLocal.add(destUriKey)
         }
         db.saveDiscoveredFolders(
             db.getDiscoveredFolders().filter { !connectedRemote.contains(it.remoteFolderId) }
         )
         return created
+    }
+
+    private fun resolveTargetFolderDoc(
+        rootDoc: DocumentFile,
+        cleanName: String,
+        remoteFolderId: String,
+        createSubfolders: Boolean,
+        singleTarget: Boolean
+    ): DocumentFile {
+        if (!createSubfolders) return rootDoc
+
+        // 1) Se a pasta escolhida já se chama igual (ex.: usuário selecionou a pasta "Teste"), não cria Teste/Teste!
+        val rootName = rootDoc.name?.trim().orEmpty()
+        if (rootName.equals(cleanName, ignoreCase = true)) {
+            return rootDoc
+        }
+
+        // 2) Se já existir subpasta com o nome esperado dentro da pasta escolhida, reutiliza (case-insensitive)
+        val existingChild = findChildDirIgnoreCase(rootDoc, cleanName)
+        if (existingChild != null) {
+            return existingChild
+        }
+
+        // 3) Se a pasta escolhida já contém marcador .drivesync ou arquivos correspondentes ao Drive remoto, usa ela própria
+        if (singleTarget || rootDoc.listFiles().any { it.isFile }) {
+            val hasControlMarker = findChildDirIgnoreCase(rootDoc, DriveSyncConstants.CONTROL_DIR) != null
+            if (hasControlMarker) {
+                return rootDoc
+            }
+            val remoteSample = runCatching { api.listTree(remoteFolderId) }.getOrDefault(emptyList())
+            if (remoteSample.isNotEmpty()) {
+                val remoteNames = remoteSample.map { it.relativePath.lowercase(Locale.US) }.toSet()
+                val localMatches = walkSafTree(rootDoc).any { remoteNames.contains(it.relativePath.lowercase(Locale.US)) }
+                if (localMatches) {
+                    return rootDoc
+                }
+            }
+        }
+
+        return findOrCreateChildDir(rootDoc, cleanName)
+            ?: throw IllegalStateException("Não foi possível criar subpasta $cleanName no celular.")
+    }
+
+    private fun findChildDirIgnoreCase(parent: DocumentFile, name: String): DocumentFile? {
+        val target = name.trim()
+        if (target.isBlank()) return null
+        val exact = parent.findFile(target)
+        if (exact != null && exact.isDirectory) return exact
+        return parent.listFiles().firstOrNull {
+            it.isDirectory && (it.name?.trim()?.equals(target, ignoreCase = true) == true)
+        }
     }
 
     fun importDocumentUris(folderId: String, subpath: String, uris: List<Uri>): Pair<Int, List<String>> {
@@ -359,13 +418,17 @@ class MobileSyncEngine(
 
             val remoteFiles = api.listTree(folder.remoteFolderId)
             val remoteByPath = remoteFiles.associateBy { it.relativePath }
-            val localFiles = walkSafTree(rootDoc)
+            val remoteByLower = remoteFiles.associateBy { it.relativePath.lowercase(Locale.US) }
+            val rawLocalFiles = walkSafTree(rootDoc)
+            val localFiles = filterAndCleanSelfNestedDuplicates(folder, rootDoc, rawLocalFiles, remoteByLower)
             val localByPath = localFiles.associateBy { it.relativePath }
+            val localByLower = localFiles.associateBy { it.relativePath.lowercase(Locale.US) }
             val baseline = db.listSyncedFiles(folder.id)
 
             var uploads = 0
             var downloads = 0
             var keptCount = 0
+            var reconciledCount = 0
 
             // 1. Avaliar arquivos existentes no Drive
             for (rf in remoteFiles) {
@@ -413,20 +476,27 @@ class MobileSyncEngine(
 
                 db.clearBlockedFile(folder.id, rf.relativePath)
                 val prev = baseline[rf.relativePath]
-                val local = localByPath[rf.relativePath]
+                val local = localByPath[rf.relativePath] ?: localByLower[rf.relativePath.lowercase(Locale.US)]
 
                 if (local != null) {
                     val localHash = resolveLocalHash(local, prev)
-                    val remoteMatchesLocal = rf.md5Checksum.isNotBlank() && rf.md5Checksum == localHash
+                    val remoteMatchesLocal =
+                        (rf.md5Checksum.isNotBlank() && localHash.isNotBlank() &&
+                            rf.md5Checksum.equals(localHash, ignoreCase = true)) ||
+                            (prev == null && local.sizeBytes == rf.sizeBytes &&
+                                (rf.md5Checksum.isBlank() || localHash.isBlank()))
                     val remoteUnchanged = prev != null &&
                         prev.remoteFileId == rf.id &&
-                        ((rf.md5Checksum.isNotBlank() && rf.md5Checksum == prev.remoteMd5) ||
+                        ((rf.md5Checksum.isNotBlank() && rf.md5Checksum.equals(prev.remoteMd5, ignoreCase = true)) ||
                             (rf.md5Checksum.isBlank() && rf.modifiedTime == prev.remoteModifiedAt))
                     val localUnchanged = prev != null &&
                         prev.localSize == local.sizeBytes &&
-                        (prev.localMtimeMs == local.modifiedMs || (localHash.isNotBlank() && localHash == prev.localHash))
+                        (prev.localMtimeMs == local.modifiedMs || (localHash.isNotBlank() && localHash.equals(prev.localHash, ignoreCase = true)))
 
                     if (remoteMatchesLocal || (remoteUnchanged && localUnchanged)) {
+                        if (prev == null) {
+                            reconciledCount++
+                        }
                         db.upsertSyncedFile(
                             SyncedFileRow(
                                 folderId = folder.id,
@@ -449,8 +519,9 @@ class MobileSyncEngine(
 
                     if (remoteUnchanged && !localUnchanged) {
                         if (folder.direction == "bidirectional") {
-                            uploadExistingOrNew(folder, account, local, existingRemoteId = rf.id, localHash = localHash)
-                            uploads++
+                            if (uploadExistingOrNew(folder, account, local, existingRemoteId = rf.id, localHash = localHash)) {
+                                uploads++
+                            }
                         }
                         continue
                     }
@@ -464,7 +535,7 @@ class MobileSyncEngine(
                 } else {
                     if (prev != null && !prev.deletedOnRemote && prev.lastAction != "trashed_local") {
                         val sameRemote = prev.remoteFileId == rf.id &&
-                            ((rf.md5Checksum.isNotBlank() && rf.md5Checksum == prev.remoteMd5) ||
+                            ((rf.md5Checksum.isNotBlank() && rf.md5Checksum.equals(prev.remoteMd5, ignoreCase = true)) ||
                                 rf.modifiedTime == prev.remoteModifiedAt)
                         if (sameRemote) {
                             if (folder.onLocalDelete == "trash_remote" &&
@@ -495,8 +566,8 @@ class MobileSyncEngine(
 
             // 2. Avaliar arquivos apagados no Google Drive
             for ((rel, prev) in baseline) {
-                if (remoteByPath.containsKey(rel)) continue
-                val local = localByPath[rel]
+                if (remoteByPath.containsKey(rel) || remoteByLower.containsKey(rel.lowercase(Locale.US))) continue
+                val local = localByPath[rel] ?: localByLower[rel.lowercase(Locale.US)]
                 if (local == null) {
                     db.deleteSyncedFile(folder.id, rel)
                     continue
@@ -554,7 +625,11 @@ class MobileSyncEngine(
             if (folder.direction == "bidirectional") {
                 val refreshedBaseline = db.listSyncedFiles(folder.id)
                 for (local in localFiles) {
-                    if (remoteByPath.containsKey(local.relativePath)) continue
+                    if (remoteByPath.containsKey(local.relativePath) ||
+                        remoteByLower.containsKey(local.relativePath.lowercase(Locale.US))
+                    ) {
+                        continue
+                    }
                     val prev = refreshedBaseline[local.relativePath]
                     if (prev?.deletedOnRemote == true) {
                         val hashNow = resolveLocalHash(local, prev)
@@ -601,8 +676,9 @@ class MobileSyncEngine(
 
                     db.clearBlockedFile(folder.id, local.relativePath)
                     val hash = resolveLocalHash(local, prev)
-                    uploadExistingOrNew(folder, account, local, existingRemoteId = null, localHash = hash)
-                    uploads++
+                    if (uploadExistingOrNew(folder, account, local, existingRemoteId = null, localHash = hash)) {
+                        uploads++
+                    }
                 }
             }
 
@@ -651,6 +727,9 @@ class MobileSyncEngine(
                 append("Em dia")
                 if (downloads > 0 || uploads > 0) {
                     append(" • $downloads baixado(s), $uploads enviado(s)")
+                }
+                if (reconciledCount > 0) {
+                    append(" • $reconciledCount já existente(s) aproveitado(s)")
                 }
                 if (keptCount > 0) {
                     append(" • $keptCount mantido(s) localmente")
@@ -740,25 +819,106 @@ class MobileSyncEngine(
         )
     }
 
+    private fun filterAndCleanSelfNestedDuplicates(
+        folder: SyncFolderConfig,
+        rootDoc: DocumentFile,
+        rawLocalFiles: List<LocalSafFile>,
+        remoteByLower: Map<String, DriveRemoteFile>
+    ): List<LocalSafFile> {
+        val selfNames = listOf(folder.name, folder.remoteFolderName)
+            .map { it.trim().lowercase(Locale.US) }
+            .filter { it.isNotBlank() }
+            .toSet()
+        if (selfNames.isEmpty()) return rawLocalFiles
+
+        val rootLocalLower = rawLocalFiles.associateBy { it.relativePath.lowercase(Locale.US) }
+        val filtered = mutableListOf<LocalSafFile>()
+        val prunedDirs = mutableSetOf<String>()
+
+        for (item in rawLocalFiles) {
+            val slashIdx = item.relativePath.indexOf('/')
+            if (slashIdx > 0) {
+                val topSeg = item.relativePath.substring(0, slashIdx)
+                val innerRel = item.relativePath.substring(slashIdx + 1)
+                if (selfNames.contains(topSeg.lowercase(Locale.US))) {
+                    val innerLower = innerRel.lowercase(Locale.US)
+                    val rootLocalMatch = rootLocalLower[innerLower]
+                    val remoteRootMatch = remoteByLower[innerLower]
+                    val matchesRoot = (rootLocalMatch != null && rootLocalMatch.sizeBytes == item.sizeBytes) ||
+                        (remoteRootMatch != null && remoteRootMatch.sizeBytes == item.sizeBytes)
+                    if (matchesRoot) {
+                        if (rootLocalMatch != null && !remoteByLower.containsKey(item.relativePath.lowercase(Locale.US))) {
+                            runCatching { item.doc.delete() }
+                            prunedDirs.add(topSeg)
+                        }
+                        continue
+                    }
+                }
+            }
+            filtered.add(item)
+        }
+
+        for (dirName in prunedDirs) {
+            runCatching {
+                val sub = findChildDirIgnoreCase(rootDoc, dirName)
+                if (sub != null && sub.listFiles().isEmpty()) {
+                    sub.delete()
+                }
+            }
+        }
+        return filtered
+    }
+
     private fun uploadExistingOrNew(
         folder: SyncFolderConfig,
         account: AccountInfo,
         local: LocalSafFile,
         existingRemoteId: String?,
         localHash: String
-    ) {
+    ): Boolean {
         val segments = local.relativePath.split('/').filter { it.isNotBlank() }
-        if (segments.isEmpty()) return
+        if (segments.isEmpty()) return false
         val parentFolderId = if (existingRemoteId != null || segments.size == 1) {
             folder.remoteFolderId
         } else {
             api.ensureSubfolderPath(folder.remoteFolderId, segments.dropLast(1))
         }
+        var targetRemoteId = existingRemoteId
+        if (targetRemoteId == null) {
+            val remoteDup = runCatching { api.findFileInFolder(parentFolderId, segments.last()) }.getOrNull()
+            if (remoteDup != null) {
+                val sameContent = (remoteDup.md5Checksum.isNotBlank() &&
+                    localHash.isNotBlank() &&
+                    remoteDup.md5Checksum.equals(localHash, ignoreCase = true)) ||
+                    (remoteDup.md5Checksum.isBlank() && remoteDup.sizeBytes == local.sizeBytes)
+                if (sameContent) {
+                    db.upsertSyncedFile(
+                        SyncedFileRow(
+                            folderId = folder.id,
+                            relativePath = local.relativePath,
+                            remoteFileId = remoteDup.id,
+                            localUri = local.doc.uri.toString(),
+                            localSize = local.sizeBytes,
+                            localMtimeMs = local.modifiedMs,
+                            localHash = localHash,
+                            remoteSize = remoteDup.sizeBytes,
+                            remoteModifiedAt = remoteDup.modifiedTime,
+                            remoteMd5 = remoteDup.md5Checksum,
+                            lastAction = "synced",
+                            authorEmail = remoteDup.authorEmail.ifBlank { account.email },
+                            authorName = remoteDup.authorName.ifBlank { account.displayName }
+                        )
+                    )
+                    return false
+                }
+                targetRemoteId = remoteDup.id
+            }
+        }
         val uploaded = context.contentResolver.openInputStream(local.doc.uri)?.use { input ->
             api.uploadStreamResumable(
                 parentFolderId = parentFolderId,
                 fileName = segments.last(),
-                existingFileId = existingRemoteId,
+                existingFileId = targetRemoteId,
                 mimeType = local.mimeType,
                 sizeBytes = local.sizeBytes,
                 input = input,
@@ -809,6 +969,7 @@ class MobileSyncEngine(
             authorEmail = account.email,
             fileSizeBytes = local.sizeBytes
         )
+        return true
     }
 
     private fun saveConflictCopy(rootDoc: DocumentFile, local: LocalSafFile) {
@@ -888,8 +1049,8 @@ class MobileSyncEngine(
     }
 
     private fun findOrCreateChildDir(parent: DocumentFile, name: String): DocumentFile? {
-        val existing = parent.findFile(name)
-        if (existing != null && existing.isDirectory) return existing
+        val existing = findChildDirIgnoreCase(parent, name)
+        if (existing != null) return existing
         return parent.createDirectory(name)
     }
 

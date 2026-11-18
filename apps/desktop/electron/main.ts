@@ -216,6 +216,140 @@ async function installDesktopUpdate(rawDownloadUrl?: string): Promise<{
   return { started: true, mode: 'browser_download', detail: 'Página de download aberta no navegador.' };
 }
 
+function buildLinuxSystemUninstallCmd(): string {
+  const pkgInstalled =
+    fs.existsSync('/opt/DriveSync') || fs.existsSync('/usr/lib/drivesync') || fs.existsSync('/usr/bin/drivesync');
+  if (!pkgInstalled) return '';
+
+  const candidates: Array<{ bin: string; cmd: string }> = [
+    {
+      bin: 'pacman',
+      cmd: 'if pacman -Qi drivesync >/dev/null 2>&1; then pacman -Rns --noconfirm drivesync; elif pacman -Qi drivesync-desktop >/dev/null 2>&1; then pacman -Rns --noconfirm drivesync-desktop; fi',
+    },
+    { bin: 'apt-get', cmd: 'apt-get remove -y drivesync || true' },
+    { bin: 'dnf', cmd: 'dnf remove -y drivesync || true' },
+    { bin: 'rpm', cmd: 'rpm -e drivesync || true' },
+  ];
+
+  for (const item of candidates) {
+    try {
+      const resolved = execFileSync('which', [item.bin], { encoding: 'utf8' }).trim();
+      if (resolved) return item.cmd;
+    } catch {
+      // tenta o próximo gerenciador
+    }
+  }
+  return '';
+}
+
+async function performDesktopUninstall(purgeData = false): Promise<{ started: boolean; detail: string }> {
+  stopDaemon();
+  applyAutoStart(false);
+
+  if (process.platform === 'linux') {
+    const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+    const cfgHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    const pathsToRemove = [
+      path.join(dataHome, 'drivesync'),
+      path.join(os.homedir(), '.local', 'bin', 'drivesync'),
+      path.join(os.homedir(), '.local', 'bin', 'drivesync-uninstall'),
+      path.join(dataHome, 'applications', 'drivesync.desktop'),
+      path.join(dataHome, 'icons', 'hicolor', '512x512', 'apps', 'drivesync.png'),
+      path.join(cfgHome, 'autostart', 'drivesync.desktop'),
+    ];
+    if (process.env.APPIMAGE) {
+      pathsToRemove.push(process.env.APPIMAGE);
+    }
+    if (purgeData) {
+      pathsToRemove.push(path.join(cfgHome, 'DriveSync'));
+    }
+
+    const sysCmd = buildLinuxSystemUninstallCmd();
+    const lines = [
+      'sleep 0.6',
+      'for target in "$@"; do rm -rf "$target"; done',
+      `update-desktop-database ${JSON.stringify(path.join(dataHome, 'applications'))} >/dev/null 2>&1 || true`,
+    ];
+    if (sysCmd) {
+      lines.push(
+        `if command -v pkexec >/dev/null 2>&1; then pkexec sh -c ${JSON.stringify(sysCmd)} || true; fi`,
+      );
+    }
+    lines.push(
+      'if command -v notify-send >/dev/null 2>&1; then notify-send "DriveSync desinstalado" "O aplicativo foi removido. Suas pastas sincronizadas permanecem intactas." >/dev/null 2>&1 || true; fi',
+    );
+
+    const child = spawn('bash', ['-c', lines.join('; '), '--', ...pathsToRemove], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+
+    isQuitting = true;
+    setTimeout(() => app.quit(), 250);
+    return {
+      started: true,
+      detail: 'Desinstalação iniciada no Linux. Suas pastas sincronizadas permanecem intactas.',
+    };
+  }
+
+  if (process.platform === 'win32') {
+    const execDir = path.dirname(process.execPath);
+    const uninstaller = [
+      path.join(execDir, 'Uninstall DriveSync.exe'),
+      path.join(execDir, '..', 'Uninstall DriveSync.exe'),
+    ].find((candidate) => fs.existsSync(candidate));
+
+    if (purgeData) {
+      try {
+        fs.rmSync(app.getPath('userData'), { recursive: true, force: true });
+      } catch {
+        // ignora erro se em uso antes de sair
+      }
+    }
+
+    if (uninstaller) {
+      const child = spawn(uninstaller, [], { detached: true, stdio: 'ignore' });
+      child.unref();
+    } else {
+      await shell.openExternal('ms-settings:appsfeatures');
+    }
+    isQuitting = true;
+    setTimeout(() => app.quit(), 300);
+    return {
+      started: true,
+      detail: 'Desinstalador do Windows iniciado.',
+    };
+  }
+
+  return { started: false, detail: 'Desinstalação direta não suportada neste sistema.' };
+}
+
+function handleInteractiveUninstallDialog(): boolean {
+  const options: Electron.MessageBoxSyncOptions = {
+    type: 'warning',
+    title: 'Desinstalar DriveSync',
+    message: 'Deseja desinstalar o DriveSync deste computador?',
+    detail:
+      'Suas pastas sincronizadas no computador e no Google Drive continuarão intactas.',
+    buttons: [
+      'Cancelar',
+      'Desinstalar (manter configurações)',
+      'Desinstalar e apagar dados do app',
+    ],
+    defaultId: 0,
+    cancelId: 0,
+  };
+  const choice = mainWindow
+    ? dialog.showMessageBoxSync(mainWindow, options)
+    : dialog.showMessageBoxSync(options);
+  if (choice === 1 || choice === 2) {
+    void performDesktopUninstall(choice === 2);
+    return true;
+  }
+  return false;
+}
+
 const sessionToken = crypto.randomBytes(24).toString('hex');
 
 const TRAY_ICON_SVG = `
@@ -569,6 +703,10 @@ function registerIPC() {
   ipcMain.handle('app:install-update', (_ev, downloadUrl?: string) =>
     installDesktopUpdate(downloadUrl),
   );
+
+  ipcMain.handle('app:uninstall', (_ev, options?: { purgeData?: boolean }) =>
+    performDesktopUninstall(Boolean(options?.purgeData)),
+  );
 }
 
 app.setName('DriveSync');
@@ -584,15 +722,26 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_ev, commandLine) => {
     if (mainWindow) {
       if (!mainWindow.isVisible()) mainWindow.show();
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+    if (commandLine.includes('--uninstall') || commandLine.includes('uninstall')) {
+      handleInteractiveUninstallDialog();
+    }
   });
 
   app.whenReady().then(async () => {
+    if (process.argv.includes('--uninstall') || process.argv.includes('uninstall')) {
+      const started = handleInteractiveUninstallDialog();
+      if (!started) {
+        isQuitting = true;
+        app.quit();
+      }
+      return;
+    }
     registerIPC();
     try {
       await startDaemon();

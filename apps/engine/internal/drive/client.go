@@ -353,24 +353,55 @@ func (c *GoogleDriveClient) ShareFolder(ctx context.Context, folderID string, in
 }
 
 func (c *GoogleDriveClient) findChildFolder(ctx context.Context, parentID, name string) (string, bool, error) {
-	params := url.Values{}
-	params.Set("q", fmt.Sprintf("'%s' in parents and name = '%s' and mimeType = '%s' and trashed = false",
-		escapeQueryLiteral(parentID), escapeQueryLiteral(name), folderMimeType))
-	params.Set("pageSize", "1")
-	params.Set("supportsAllDrives", "true")
-	params.Set("includeItemsFromAllDrives", "true")
-	params.Set("fields", "files(id)")
+	return c.findChildItem(ctx, parentID, name, true)
+}
 
-	var resp struct {
-		Files []driveFile `json:"files"`
+// findChildItem procura um filho direto por nome (exato primeiro, case-insensitive como fallback).
+func (c *GoogleDriveClient) findChildItem(ctx context.Context, parentID, name string, wantFolder bool) (string, bool, error) {
+	op := "!="
+	if wantFolder {
+		op = "="
 	}
-	if err := c.doJSON(ctx, http.MethodGet, c.apiBaseURL+"/files?"+params.Encode(), nil, &resp); err != nil {
-		return "", false, err
+	query := fmt.Sprintf("'%s' in parents and mimeType %s '%s' and trashed = false",
+		escapeQueryLiteral(parentID), op, folderMimeType)
+
+	pageToken := ""
+	caseMatchID := ""
+	for {
+		params := url.Values{}
+		params.Set("q", query)
+		params.Set("pageSize", "1000")
+		params.Set("supportsAllDrives", "true")
+		params.Set("includeItemsFromAllDrives", "true")
+		params.Set("fields", "nextPageToken,files(id,name)")
+		if pageToken != "" {
+			params.Set("pageToken", pageToken)
+		}
+
+		var resp struct {
+			NextPageToken string      `json:"nextPageToken"`
+			Files         []driveFile `json:"files"`
+		}
+		if err := c.doJSON(ctx, http.MethodGet, c.apiBaseURL+"/files?"+params.Encode(), nil, &resp); err != nil {
+			return "", false, err
+		}
+		for _, f := range resp.Files {
+			if f.Name == name {
+				return f.ID, true, nil
+			}
+			if caseMatchID == "" && strings.EqualFold(f.Name, name) {
+				caseMatchID = f.ID
+			}
+		}
+		if resp.NextPageToken == "" {
+			break
+		}
+		pageToken = resp.NextPageToken
 	}
-	if len(resp.Files) == 0 {
-		return "", false, nil
+	if caseMatchID != "" {
+		return caseMatchID, true, nil
 	}
-	return resp.Files[0].ID, true, nil
+	return "", false, nil
 }
 
 func (c *GoogleDriveClient) EnsurePath(ctx context.Context, rootFolderID string, relDir string) (string, error) {
@@ -496,7 +527,20 @@ func (c *GoogleDriveClient) ListTree(ctx context.Context, rootFolderID string) (
 		}
 	}
 
-	return entries, rootCanWrite, nil
+	deduped := make([]RemoteEntry, 0, len(entries))
+	indexByRel := make(map[string]int, len(entries))
+	for _, entry := range entries {
+		if idx, exists := indexByRel[entry.RelativePath]; exists {
+			if entry.ModTime.After(deduped[idx].ModTime) {
+				deduped[idx] = entry
+			}
+			continue
+		}
+		indexByRel[entry.RelativePath] = len(deduped)
+		deduped = append(deduped, entry)
+	}
+
+	return deduped, rootCanWrite, nil
 }
 
 func (c *GoogleDriveClient) DownloadFile(ctx context.Context, fileID string, destPath string, expectedSize int64, progress ProgressFunc) (string, error) {
@@ -600,6 +644,12 @@ func (c *GoogleDriveClient) UploadFile(
 	size := st.Size()
 	if size > maxBytes {
 		return RemoteEntry{}, fmt.Errorf("%w (%d bytes > %d bytes)", ErrExceedsMaxUpload, size, maxBytes)
+	}
+
+	if existingFileID == "" {
+		if foundID, ok, err := c.findChildItem(ctx, parentID, remoteName, false); err == nil && ok {
+			existingFileID = foundID
+		}
 	}
 
 	meta := map[string]any{

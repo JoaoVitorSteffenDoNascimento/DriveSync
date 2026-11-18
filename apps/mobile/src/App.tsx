@@ -1514,6 +1514,30 @@ const MobileSettingsTab: React.FC<{
           </a>
         </div>
       </div>
+
+      <div className="card" style={{ borderColor: 'rgba(239, 68, 68, 0.35)' }}>
+        <div className="row-gap" style={{ marginBottom: 6 }}>
+          <Trash2 size={16} color="#ef4444" />
+          <strong>Desinstalar DriveSync</strong>
+        </div>
+        <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-muted)' }}>
+          Remove o aplicativo deste aparelho sem apagar suas pastas e arquivos já sincronizados no celular ou no Google Drive.
+        </p>
+        <button
+          type="button"
+          className="btn btn-sm btn-danger"
+          onClick={async () => {
+            onError(null);
+            try {
+              await bridge.uninstallApp();
+            } catch (ex) {
+              onError(ex instanceof Error ? ex.message : String(ex));
+            }
+          }}
+        >
+          <Trash2 size={14} /> Desinstalar aplicativo
+        </button>
+      </div>
     </div>
   );
 };

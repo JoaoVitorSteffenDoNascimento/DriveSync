@@ -1,5 +1,5 @@
 /** Versão oficial sincronizada em todo o monorepo (SemVer 2.0.0). */
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.6.0';
 
 /** Repositório e endpoints oficiais para verificação e download de atualizações. */
 export const GITHUB_REPO_OWNER = 'JoaoVitorSteffenDoNascimento';

@@ -278,7 +278,44 @@ class DriveApiClient(
     fun listTree(rootFolderId: String): List<DriveRemoteFile> {
         val collected = mutableListOf<DriveRemoteFile>()
         walkFolder(rootFolderId, "", collected)
-        return collected
+        val deduped = linkedMapOf<String, DriveRemoteFile>()
+        for (item in collected) {
+            val prev = deduped[item.relativePath]
+            if (prev == null || item.modifiedTime >= prev.modifiedTime) {
+                deduped[item.relativePath] = item
+            }
+        }
+        return deduped.values.toList()
+    }
+
+    fun findFileInFolder(parentId: String, fileName: String): DriveRemoteFile? {
+        val escapedName = fileName.replace("\\", "\\\\").replace("'", "\\'")
+        val escapedParent = parentId.replace("'", "\\'")
+        val q =
+            "'$escapedParent' in parents and name='$escapedName' and mimeType!='application/vnd.google-apps.folder' and trashed=false"
+        val fields =
+            "files(id,name,mimeType,size,md5Checksum,modifiedTime,trashed,lastModifyingUser(emailAddress,displayName),owners(emailAddress,displayName),appProperties)"
+        val url =
+            "$DRIVE_API/files?q=${enc(q)}&fields=${enc(fields)}&pageSize=10&orderBy=modifiedTime desc&supportsAllDrives=true&includeItemsFromAllDrives=true"
+        val obj = requestJson("GET", url)
+        val arr = obj.optJSONArray("files") ?: return null
+        if (arr.length() == 0) return null
+        val f = arr.getJSONObject(0)
+        val mime = f.optString("mimeType", "")
+        if (mime.startsWith("application/vnd.google-apps.")) return null
+        val (authorEmail, authorName) = extractAuthor(f)
+        return DriveRemoteFile(
+            id = f.getString("id"),
+            name = f.optString("name", fileName),
+            relativePath = fileName,
+            sizeBytes = f.optString("size", "0").toLongOrNull() ?: 0L,
+            md5Checksum = f.optString("md5Checksum", ""),
+            modifiedTime = f.optString("modifiedTime", ""),
+            mimeType = mime,
+            trashed = f.optBoolean("trashed", false),
+            authorEmail = authorEmail,
+            authorName = authorName
+        )
     }
 
     private fun walkFolder(folderId: String, prefix: String, out: MutableList<DriveRemoteFile>) {
@@ -337,14 +374,19 @@ class DriveApiClient(
     }
 
     private fun findOrCreateChildFolder(parentId: String, name: String): String {
-        val escaped = name.replace("\\", "\\\\").replace("'", "\\'")
+        val escapedParent = parentId.replace("'", "\\'")
         val q =
-            "'${parentId.replace("'", "\\'")}' in parents and name='$escaped' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-        val url = "$DRIVE_API/files?q=${enc(q)}&fields=files(id,name)&pageSize=5&supportsAllDrives=true&includeItemsFromAllDrives=true"
+            "'$escapedParent' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        val url = "$DRIVE_API/files?q=${enc(q)}&fields=files(id,name)&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true"
         val obj = requestJson("GET", url)
         val arr = obj.optJSONArray("files")
-        if (arr != null && arr.length() > 0) {
-            return arr.getJSONObject(0).getString("id")
+        if (arr != null) {
+            for (i in 0 until arr.length()) {
+                val f = arr.optJSONObject(i) ?: continue
+                if (f.optString("name", "").trim().equals(name.trim(), ignoreCase = true)) {
+                    return f.getString("id")
+                }
+            }
         }
         return createFolder(name, parentId).id
     }

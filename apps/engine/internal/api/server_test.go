@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brendha/drivesync/engine/internal/config"
 	"github.com/brendha/drivesync/engine/internal/db"
@@ -19,6 +20,7 @@ import (
 
 type apiMockDrive struct {
 	savedCode string
+	trees     map[string][]drive.RemoteEntry
 }
 
 func (a *apiMockDrive) AboutUser(context.Context) (string, string, error) {
@@ -54,7 +56,12 @@ func (a *apiMockDrive) ShareFolder(context.Context, string, config.SharePermissi
 	return nil
 }
 func (a *apiMockDrive) EnsurePath(context.Context, string, string) (string, error) { return "", nil }
-func (a *apiMockDrive) ListTree(context.Context, string) ([]drive.RemoteEntry, bool, error) {
+func (a *apiMockDrive) ListTree(_ context.Context, folderID string) ([]drive.RemoteEntry, bool, error) {
+	if a.trees != nil {
+		if list, ok := a.trees[folderID]; ok {
+			return list, true, nil
+		}
+	}
 	return nil, true, nil
 }
 func (a *apiMockDrive) DownloadFile(context.Context, string, string, int64, drive.ProgressFunc) (string, error) {
@@ -253,4 +260,106 @@ func TestAPIAuthFoldersAndSettingsCap4GB(t *testing.T) {
 	// filepath.Clean("/../../etc") limpa para "/etc", então testa exatamente que fica dentro da pasta:
 	// vamos validar também subpath inexistente dentro da pasta não vaza nada
 	_ = recBad
+}
+
+func TestSyncDiscoveredSmartFolderResolution(t *testing.T) {
+	tmp := t.TempDir()
+	store, err := db.Open(filepath.Join(tmp, "smart.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	md := &apiMockDrive{
+		trees: map[string][]drive.RemoteEntry{
+			"rem-viagem": {
+				{
+					ID:           "f-viagem-1",
+					Name:         "viagem.jpg",
+					RelativePath: "viagem.jpg",
+					Size:         int64(len("foto-viagem")),
+				},
+			},
+		},
+	}
+	auth := drive.NewAuthManager(store, tmp)
+	sy := syncer.New(store, md, nil)
+	srv := NewServer("segredo-local", store, auth, sy, nil, nil)
+	srv.driveFactory = func(context.Context) (drive.API, error) { return md, nil }
+	handler := srv.Handler()
+
+	// 1) Usuário já tem ".../Teste" e escolheu exatamente ".../Teste" -> NÃO pode criar ".../Teste/Teste"
+	testeDir := filepath.Join(tmp, "Teste")
+	_ = os.MkdirAll(testeDir, 0o755)
+	_ = os.WriteFile(filepath.Join(testeDir, "foto.jpg"), []byte("123"), 0o644)
+
+	body1, _ := json.Marshal(map[string]any{
+		"basePath": testeDir,
+		"folders": []config.DiscoveredRemoteFolder{
+			{RemoteFolderID: "rem-teste", RemoteFolderName: "Teste", Kind: config.FolderKindPersonal},
+		},
+	})
+	req1 := httptest.NewRequest(http.MethodPost, "/api/account/sync-discovered", bytes.NewReader(body1))
+	req1.Header.Set("X-DriveSync-Token", "segredo-local")
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req1)
+	if rec1.Code != http.StatusCreated {
+		t.Fatalf("esperava 201 para Teste, obtido %d: %s", rec1.Code, rec1.Body.String())
+	}
+	var created1 []config.SyncFolderConfig
+	_ = json.Unmarshal(rec1.Body.Bytes(), &created1)
+	if len(created1) != 1 || created1[0].LocalPath != testeDir {
+		t.Fatalf("esperava reutilizar %q sem aninhar Teste/Teste, obtido %+v", testeDir, created1)
+	}
+
+	// 2) Pasta pai contém subpasta com nome diferente em maiúscula/minúscula ("projetos" vs "Projetos")
+	parentDir := filepath.Join(tmp, "Raiz")
+	existingCase := filepath.Join(parentDir, "projetos")
+	_ = os.MkdirAll(existingCase, 0o755)
+
+	body2, _ := json.Marshal(map[string]any{
+		"basePath": parentDir,
+		"folders": []config.DiscoveredRemoteFolder{
+			{RemoteFolderID: "rem-proj", RemoteFolderName: "Projetos", Kind: config.FolderKindPersonal},
+		},
+	})
+	req2 := httptest.NewRequest(http.MethodPost, "/api/account/sync-discovered", bytes.NewReader(body2))
+	req2.Header.Set("X-DriveSync-Token", "segredo-local")
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusCreated {
+		t.Fatalf("esperava 201 para Projetos, obtido %d: %s", rec2.Code, rec2.Body.String())
+	}
+	var created2 []config.SyncFolderConfig
+	_ = json.Unmarshal(rec2.Body.Bytes(), &created2)
+	if len(created2) != 1 || created2[0].LocalPath != existingCase {
+		t.Fatalf("esperava reutilizar pasta existente %q, obtido %+v", existingCase, created2)
+	}
+
+	// 3) Usuário escolhe pasta local com outro nome ("FotosCelular") que já possui os mesmos arquivos do Drive
+	customDir := filepath.Join(tmp, "FotosCelular")
+	_ = os.MkdirAll(customDir, 0o755)
+	_ = os.WriteFile(filepath.Join(customDir, "viagem.jpg"), []byte("foto-viagem"), 0o644)
+
+	body3, _ := json.Marshal(map[string]any{
+		"basePath": customDir,
+		"folders": []config.DiscoveredRemoteFolder{
+			{RemoteFolderID: "rem-viagem", RemoteFolderName: "Viagem", Kind: config.FolderKindPersonal},
+		},
+	})
+	req3 := httptest.NewRequest(http.MethodPost, "/api/account/sync-discovered", bytes.NewReader(body3))
+	req3.Header.Set("X-DriveSync-Token", "segredo-local")
+	rec3 := httptest.NewRecorder()
+	handler.ServeHTTP(rec3, req3)
+	if rec3.Code != http.StatusCreated {
+		t.Fatalf("esperava 201 para FotosCelular, obtido %d: %s", rec3.Code, rec3.Body.String())
+	}
+	var created3 []config.SyncFolderConfig
+	_ = json.Unmarshal(rec3.Body.Bytes(), &created3)
+	if len(created3) != 1 || created3[0].LocalPath != customDir {
+		t.Fatalf("esperava detectar arquivos existentes em %q, obtido %+v", customDir, created3)
+	}
+
+	// Aguarda goroutines assíncronas de sync inicial antes de fechar store no defer
+	time.Sleep(30 * time.Millisecond)
 }

@@ -20,6 +20,7 @@ export interface DesktopBridge {
   checkForUpdates: (notifyOs?: boolean) => Promise<AppUpdateCheckResult>;
   installUpdate: (downloadUrl?: string) => Promise<{ started: boolean; mode: string; detail: string }>;
   onUpdateAvailable: (listener: (info: AppUpdateCheckResult) => void) => () => void;
+  uninstallApp: (options?: { purgeData?: boolean }) => Promise<{ started: boolean; detail: string }>;
 }
 
 const bridge: DesktopBridge = {
@@ -45,6 +46,7 @@ const bridge: DesktopBridge = {
     ipcRenderer.on('app:update-available', handler);
     return () => ipcRenderer.removeListener('app:update-available', handler);
   },
+  uninstallApp: (options) => ipcRenderer.invoke('app:uninstall', options),
 };
 
 contextBridge.exposeInMainWorld('driveSyncDesktop', bridge);

@@ -969,7 +969,12 @@ class DriveSyncPlugin : Plugin() {
                     id = "",
                     createdAt = DriveSyncConstants.nowIsoUtc()
                 )
-                val saved = db.upsertFolder(cfg)
+                val existing = db.listFolders().firstOrNull {
+                    it.remoteFolderId == remoteId || it.localPath.trimEnd('/') == localPath.trimEnd('/')
+                }
+                val saved = db.upsertFolder(
+                    if (existing != null) cfg.copy(id = existing.id, createdAt = existing.createdAt) else cfg
+                )
                 DriveSyncWorker.applySchedule(context, db.getSettings())
                 executor.execute {
                     runCatching {
@@ -1152,6 +1157,24 @@ class DriveSyncPlugin : Plugin() {
                 }
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Falha ao baixar atualização.") }
+        }
+    }
+
+    @PluginMethod
+    fun uninstallApp(call: PluginCall) {
+        val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:${context.packageName}")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val act = activity
+        runCatching {
+            if (act != null) {
+                act.runOnUiThread { act.startActivity(intent) }
+            } else {
+                context.startActivity(intent)
+            }
+            call.resolve(JSObject().apply { put("started", true) })
+        }.onFailure {
+            call.reject(it.message ?: "Não foi possível abrir o desinstalador do Android.")
         }
     }
 

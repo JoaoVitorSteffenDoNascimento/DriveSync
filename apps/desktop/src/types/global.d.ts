@@ -19,6 +19,7 @@ export interface DesktopBridge {
   checkForUpdates: (notifyOs?: boolean) => Promise<AppUpdateCheckResult>;
   installUpdate: (downloadUrl?: string) => Promise<{ started: boolean; mode: string; detail: string }>;
   onUpdateAvailable: (listener: (info: AppUpdateCheckResult) => void) => () => void;
+  uninstallApp: (options?: { purgeData?: boolean }) => Promise<{ started: boolean; detail: string }>;
 }
 
 declare global {

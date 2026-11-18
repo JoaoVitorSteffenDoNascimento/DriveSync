@@ -8,3 +8,9 @@ Icon=drivesync
 Terminal=false
 Categories=Network;FileTransfer;Utility;
 StartupNotify=true
+Actions=Uninstall;
+
+[Desktop Action Uninstall]
+Name=Desinstalar DriveSync
+Exec=/usr/bin/drivesync --uninstall
+Icon=user-trash
