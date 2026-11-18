@@ -914,6 +914,140 @@ button {
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+/* Consumer Product Hero Showcase & Multi-User Pills */
+.hero-showcase {
+  position: relative;
+  margin: 44px auto 0;
+  max-width: 920px;
+  border-radius: 22px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(34, 211, 238, 0.25), rgba(16, 185, 129, 0.4));
+  box-shadow: 0 34px 95px -20px rgba(0, 0, 0, 0.85);
+}
+
+.hero-showcase-inner {
+  border-radius: 21px;
+  padding: 22px 24px 24px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(59, 130, 246, 0.14), transparent 72%),
+    linear-gradient(180deg, rgba(13, 17, 27, 0.97), rgba(8, 11, 17, 0.99));
+  text-align: left;
+}
+
+.hero-showcase-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.hero-showcase-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.user-avatars-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.avatar-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.avatar-dot--blue { background: linear-gradient(135deg, #2563eb, #38bdf8); }
+.avatar-dot--emerald { background: linear-gradient(135deg, #059669, #34d399); }
+.avatar-dot--violet { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.avatar-dot--amber { background: linear-gradient(135deg, #d97706, #fbbf24); }
+
+.showcase-diagram-wrap {
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(6, 9, 15, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow-x: auto;
+}
+
+.showcase-diagram-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 560px;
+}
+
+/* 3 Simple Steps Cards */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.step-card .card-surface {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 22px;
+}
+
+.step-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #22d3ee);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.step-card h3 {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.step-card p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+}
+
 /* Future Features Roadmap Grid */
 .roadmap-grid {
   display: grid;
@@ -981,6 +1115,7 @@ button {
   }
 
   .arch-grid,
+  .steps-grid,
   .roadmap-grid {
     grid-template-columns: 1fr;
   }

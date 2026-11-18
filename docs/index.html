@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DriveSync — Sincronize seu Google Drive no Windows, Linux e Android</title>
+    <title>DriveSync — Suas pastas sincronizadas no Windows, Linux e Android</title>
     <meta
       name="description"
-      content="Baixe o DriveSync para Windows (.exe), Linux e Android (.apk). Veja como funciona a arquitetura direta na Google Drive API v3, Drive Master, trava de 4 GB e futuras features."
+      content="Baixe o DriveSync para Windows (.exe), Linux e Android (.apk). Conecte seus aparelhos e compartilhe pastas com amigos ou equipe pelo Google Drive."
     />
-    <meta property="og:title" content="DriveSync — Windows (.exe), Linux e Android (.apk)" />
+    <meta property="og:title" content="DriveSync — Windows, Linux e Android" />
     <meta
       property="og:description"
-      content="Sincronização direta via Google Drive API v3 para Windows, Linux e Android, sem servidor intermediário."
+      content="Suas pastas sempre sincronizadas entre computador e celular, com compartilhamento simples e proteção dos seus arquivos."
     />
     <meta property="og:image" content="assets/logo.png" />
     <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
@@ -38,10 +38,10 @@
         <nav class="nav-links" aria-label="Navegação principal">
           <a href="#baixar">Baixar</a>
           <a href="#como-funciona">Como Funciona</a>
-          <a href="#arquitetura">Arquitetura</a>
-          <a href="#essencial">Recursos</a>
-          <a href="#futuro">Futuras Features</a>
-          <a href="architecture.html">Doc Técnico</a>
+          <a href="#equipes">Para Equipes</a>
+          <a href="#essencial">Benefícios</a>
+          <a href="#futuro">Novidades</a>
+          <a href="privacy.html">Privacidade</a>
         </nav>
 
         <a
@@ -62,14 +62,14 @@
         <div class="container hero-content">
           <div class="hero-pill">
             <span class="pulse-dot" aria-hidden="true"></span>
-            <span>Windows, Linux e Android direto pela Google Drive API v3</span>
+            <span>Para Windows, Linux e Android • Simples, rápido e gratuito</span>
           </div>
 
-          <h1>Seu Drive sincronizado sem esforço.</h1>
+          <h1>Suas pastas em todos os seus aparelhos. Compartilhadas do seu jeito.</h1>
 
           <p class="hero-sub">
-            Conecte pastas do computador e do celular diretamente ao Google Drive sem servidor
-            intermediário, filtre quem envia no Drive Master e proteja seus arquivos locais.
+            Entre com sua conta Google em um clique, acesse seus arquivos no computador e no celular
+            automaticamente e compartilhe pastas com amigos, família ou equipe.
           </p>
 
           <div class="hero-actions">
@@ -95,68 +95,138 @@
             Windows 10/11 (x64) • Download direto do instalador .exe
           </div>
 
-          <!-- Render / Linear Animated Pipeline -->
-          <div class="pipeline-shell">
-            <div class="pipeline-inner">
-              <div class="node-box">
-                <div class="node-top">
-                  <span class="node-tag">PC / Celular</span>
-                  <span class="node-status">Local</span>
+          <!-- Rich Visual Showcase: Multi-User & Multi-Device Hub -->
+          <div class="hero-showcase">
+            <div class="hero-showcase-inner">
+              <div class="hero-showcase-top">
+                <div class="hero-showcase-title">
+                  <span class="pulse-dot" aria-hidden="true"></span>
+                  <span>Tudo conectado em tempo real na sua nuvem e com quem você convidar</span>
                 </div>
-                <div class="node-title">Pasta escolhida</div>
-                <div class="node-desc">Valida trava de 4 GiB antes de subir</div>
+                <div class="user-avatars-row" aria-label="Exemplos de pessoas conectadas">
+                  <span class="avatar-pill"><span class="avatar-dot avatar-dot--blue">V</span>Você (Dono)</span>
+                  <span class="avatar-pill"><span class="avatar-dot avatar-dot--emerald">A</span>Ana</span>
+                  <span class="avatar-pill"><span class="avatar-dot avatar-dot--violet">J</span>João</span>
+                  <span class="avatar-pill"><span class="avatar-dot avatar-dot--amber">+</span>Equipe / Família</span>
+                </div>
               </div>
 
-              <div class="flow-beam" aria-hidden="true"></div>
+              <div class="showcase-diagram-wrap">
+                <svg viewBox="0 0 860 300" role="img" aria-label="Ilustração visual mostrando o DriveSync conectando seus aparelhos pessoais (PC Windows, Celular Android e Notebook Linux) ao Google Drive e compartilhando pastas ao mesmo tempo com várias pessoas como Ana, João e Equipe.">
+                  <defs>
+                    <marker id="h-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
+                    </marker>
+                    <marker id="h-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
+                    </marker>
+                    <linearGradient id="hubGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="rgba(37, 99, 235, 0.25)" />
+                      <stop offset="100%" stop-color="rgba(16, 185, 129, 0.16)" />
+                    </linearGradient>
+                  </defs>
 
-              <div class="node-box is-highlighted">
-                <div class="node-top">
-                  <span class="node-tag">DriveSync</span>
-                  <span class="node-status">API v3</span>
-                </div>
-                <div class="node-title">Go + Kotlin + Shared</div>
-                <div class="node-desc">OAuth PKCE • Filtro de remetentes</div>
-              </div>
+                  <!-- Left Column Label -->
+                  <text x="128" y="24" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#93c5fd">SEUS APARELHOS CONECTADOS</text>
 
-              <div class="flow-beam" aria-hidden="true"></div>
+                  <!-- Device 1: Windows PC -->
+                  <rect x="20" y="38" width="216" height="68" rx="12" fill="#0f172a" stroke="#3b82f6" stroke-width="1.6" />
+                  <rect x="34" y="54" width="34" height="34" rx="9" fill="rgba(59,130,246,0.16)" />
+                  <rect x="42" y="62" width="18" height="13" rx="2" fill="none" stroke="#60a5fa" stroke-width="1.8" />
+                  <line x1="46" y1="80" x2="56" y2="80" stroke="#60a5fa" stroke-width="1.8" />
+                  <text x="80" y="68" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">PC de Casa (Windows)</text>
+                  <text x="80" y="88" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Pasta escolhida • Online</text>
 
-              <div class="node-box">
-                <div class="node-top">
-                  <span class="node-tag">Google Drive</span>
-                  <span class="node-status">.drivesync</span>
-                </div>
-                <div class="node-title">Descoberta &amp; Master</div>
-                <div class="node-desc">Sincroniza pastas e dispositivos na conta</div>
+                  <!-- Device 2: Android Phone -->
+                  <rect x="20" y="120" width="216" height="68" rx="12" fill="#0f172a" stroke="#22d3ee" stroke-width="1.6" />
+                  <rect x="34" y="136" width="34" height="34" rx="9" fill="rgba(34,211,238,0.14)" />
+                  <rect x="45" y="143" width="12" height="20" rx="2.5" fill="none" stroke="#22d3ee" stroke-width="1.8" />
+                  <circle cx="51" cy="159" r="1.2" fill="#22d3ee" />
+                  <text x="80" y="150" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Celular Android</text>
+                  <text x="80" y="170" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Tudo no bolso • Automático</text>
+
+                  <!-- Device 3: Linux Laptop -->
+                  <rect x="20" y="202" width="216" height="68" rx="12" fill="#0f172a" stroke="#60a5fa" stroke-width="1.6" />
+                  <rect x="34" y="218" width="34" height="34" rx="9" fill="rgba(96,165,250,0.14)" />
+                  <polyline points="44 230 50 235 44 240" fill="none" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  <line x1="52" y1="241" x2="58" y2="241" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" />
+                  <text x="80" y="232" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Notebook Trabalho (Linux)</text>
+                  <text x="80" y="252" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Mesmos arquivos sempre</text>
+
+                  <!-- Left Arrows -->
+                  <line x1="242" y1="72" x2="320" y2="128" stroke="#60a5fa" stroke-width="2" marker-start="url(#h-blue)" marker-end="url(#h-blue)" />
+                  <line x1="242" y1="154" x2="314" y2="154" stroke="#22d3ee" stroke-width="2" marker-start="url(#h-blue)" marker-end="url(#h-blue)" />
+                  <line x1="242" y1="236" x2="320" y2="180" stroke="#60a5fa" stroke-width="2" marker-start="url(#h-blue)" marker-end="url(#h-blue)" />
+
+                  <!-- Center Hub: DriveSync + Google Drive -->
+                  <rect x="326" y="76" width="208" height="156" rx="20" fill="url(#hubGrad)" stroke="#3b82f6" stroke-width="2.2" />
+                  <circle cx="430" cy="126" r="24" fill="#2563eb" />
+                  <path d="M417 134h25a6.5 6.5 0 0 0 1-12.9A9.5 9.5 0 0 0 424.5 119a7.5 7.5 0 0 0-7.5 15Z" fill="#ffffff" />
+                  <text x="430" y="174" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="18" font-weight="700" fill="#ffffff">DriveSync</text>
+                  <text x="430" y="195" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#bfdbfe">Sua conta Google Drive</text>
+                  <rect x="358" y="206" width="144" height="18" rx="9" fill="rgba(16,185,129,0.2)" />
+                  <text x="430" y="219" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#6ee7b7">Cópia protegida • Trava 4 GB</text>
+
+                  <!-- Right Arrows -->
+                  <line x1="540" y1="128" x2="618" y2="72" stroke="#34d399" stroke-width="2" marker-start="url(#h-green)" marker-end="url(#h-green)" />
+                  <line x1="546" y1="154" x2="618" y2="154" stroke="#34d399" stroke-width="2" marker-start="url(#h-green)" marker-end="url(#h-green)" />
+                  <line x1="540" y1="180" x2="618" y2="236" stroke="#34d399" stroke-width="2" marker-start="url(#h-green)" marker-end="url(#h-green)" />
+
+                  <!-- Right Column Label -->
+                  <text x="732" y="24" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#6ee7b7">VÁRIOS USUÁRIOS NA PASTA</text>
+
+                  <!-- User 1: Ana -->
+                  <rect x="624" y="38" width="216" height="68" rx="12" fill="#0f172a" stroke="#10b981" stroke-width="1.6" />
+                  <circle cx="651" cy="72" r="16" fill="#059669" />
+                  <text x="651" y="77" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">A</text>
+                  <text x="680" y="68" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Ana • Notebook</text>
+                  <text x="680" y="88" font-family="Inter, sans-serif" font-size="12" fill="#6ee7b7">Enviando fotos novas</text>
+
+                  <!-- User 2: Joao -->
+                  <rect x="624" y="120" width="216" height="68" rx="12" fill="#0f172a" stroke="#8b5cf6" stroke-width="1.6" />
+                  <circle cx="651" cy="154" r="16" fill="#7c3aed" />
+                  <text x="651" y="159" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">J</text>
+                  <text x="680" y="150" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">João • Celular</text>
+                  <text x="680" y="170" font-family="Inter, sans-serif" font-size="12" fill="#c4b5fd">Recebendo em tempo real</text>
+
+                  <!-- User 3: Equipe / Amigos -->
+                  <rect x="624" y="202" width="216" height="68" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="1.6" />
+                  <circle cx="651" cy="236" r="16" fill="#d97706" />
+                  <text x="651" y="241" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">+</text>
+                  <text x="680" y="232" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Convidados / Equipe</text>
+                  <text x="680" y="252" font-family="Inter, sans-serif" font-size="12" fill="#fde68a">Entraram com código simples</text>
+                </svg>
               </div>
             </div>
           </div>
 
-          <!-- Technical Key Metrics -->
-          <div class="metrics-strip" aria-label="Especificações principais do DriveSync">
+          <!-- Consumer-Friendly Highlights Strip -->
+          <div class="metrics-strip" aria-label="Principais facilidades do DriveSync">
             <div class="metric-box">
-              <div class="metric-val" data-release-tag>v0.3.0</div>
-              <div class="metric-label">SemVer 2.0.0 unificado (<code>versionCode 300</code>) entre Windows, Linux e Android.</div>
+              <div class="metric-val">1 Clique</div>
+              <div class="metric-label">Entre direto com sua conta Google, sem configurações difíceis.</div>
             </div>
             <div class="metric-box">
-              <div class="metric-val is-emerald">0 Servidores</div>
-              <div class="metric-label">Tráfego 100% direto Cliente ↔ Google OAuth 2.0 e Google Drive API v3.</div>
+              <div class="metric-val is-cyan">Mesmo E-mail</div>
+              <div class="metric-label">Tudo o que você salva no PC aparece no celular automaticamente.</div>
             </div>
             <div class="metric-box">
-              <div class="metric-val is-cyan">4,00 GB</div>
-              <div class="metric-label">Teto rígido (<code>MAX_UPLOAD_BYTES</code>) barrado localmente antes da rede.</div>
+              <div class="metric-val is-emerald">Vários Usuários</div>
+              <div class="metric-label">Compartilhe pastas para amigos, turma ou equipe e filtre remetentes.</div>
             </div>
             <div class="metric-box">
-              <div class="metric-val">AES-256-GCM</div>
-              <div class="metric-label">Tokens OAuth cifrados localmente em cofre + banco SQLite por aparelho.</div>
+              <div class="metric-val">Cópia Segura</div>
+              <div class="metric-label">Se alguém apagar algo na nuvem, seus arquivos baixados continuam salvos.</div>
             </div>
           </div>
         </div>
       </section>
 
+      <!-- Downloads Section -->
       <section id="baixar" class="section container">
         <div class="section-head">
           <h2>Baixar DriveSync</h2>
-          <p>Escolha sua plataforma para instalar a mesma versão unificada em todos os seus dispositivos.</p>
+          <p>Instale a mesma versão completa no seu computador ou celular Android.</p>
         </div>
 
         <div class="download-grid">
@@ -175,7 +245,7 @@
 
                 <h3 class="card-title">Windows 10 / 11</h3>
                 <p class="card-desc">
-                  Instalador executável (.exe) com Electron, bandeja do sistema e daemon Go <code>drivesyncd</code> embutido.
+                  Instalador rápido (.exe). Fica discreto perto do relógio do Windows e mantém suas pastas sempre atualizadas.
                 </p>
                 <div class="card-size-line" data-size-label="win-exe">x64 • Instalador .exe</div>
               </div>
@@ -219,7 +289,7 @@
 
                 <h3 class="card-title">Linux</h3>
                 <p class="card-desc">
-                  Compatível com X11 e Wayland (inclusive status Waybar). AppImage universal ou pacote nativo da distro.
+                  Pronto para usar em qualquer computador Linux. Basta abrir, conectar sua conta Google e escolher suas pastas.
                 </p>
                 <div class="card-size-line" data-size-label="linux-appimage">x86_64 • AppImage universal</div>
               </div>
@@ -279,9 +349,9 @@
 
                 <h3 class="card-title">Android</h3>
                 <p class="card-desc">
-                  Plugin nativo Kotlin com Android SAF, WorkManager em segundo plano, login Google em 1 clique e paridade Desktop.
+                  Aplicativo leve para celular e tablet. Veja as pastas do seu PC no bolso, envie fotos e sincronize no Wi-Fi.
                 </p>
-                <div class="card-size-line" data-size-label="android-apk">Android 7+ • APK assinado</div>
+                <div class="card-size-line" data-size-label="android-apk">Android 7+ • Aplicativo (.apk)</div>
               </div>
 
               <div class="card-actions">
@@ -308,305 +378,228 @@
         </div>
       </section>
 
-      <!-- Architecture & Interactive Diagrams Section -->
+      <!-- How It Works: 3 Easy Steps + Friendly Illustrated Diagrams -->
       <section id="como-funciona" class="section container" style="padding-top: 24px">
         <div class="section-head">
-          <h2>Como o DriveSync funciona na prática</h2>
+          <h2>Como funciona? Simples do início ao fim</h2>
           <p>
-            Veja em detalhes como os clientes Desktop e Android conversam diretamente com a Google
-            Drive API v3, descobrem dispositivos na mesma conta e protegem seus arquivos.
+            Qualquer pessoa consegue configurar em menos de um minuto, sem complicação.
           </p>
         </div>
 
+        <div class="steps-grid">
+          <article class="spotlight-card step-card">
+            <div class="card-surface">
+              <div class="step-num">1</div>
+              <h3>Entre com sua conta Google</h3>
+              <p>
+                Toque em <strong>Conectar com Google Drive</strong>, escolha seu e-mail e pronto. Não precisa digitar senhas avançadas nem cadastros extras.
+              </p>
+            </div>
+          </article>
+
+          <article class="spotlight-card step-card">
+            <div class="card-surface">
+              <div class="step-num">2</div>
+              <h3>Escolha onde salvar</h3>
+              <p>
+                Ao entrar no mesmo Google em outro aparelho, o app já encontra suas pastas e deixa você escolher em qual pasta local salvá-las.
+              </p>
+            </div>
+          </article>
+
+          <article class="spotlight-card step-card">
+            <div class="card-surface">
+              <div class="step-num">3</div>
+              <h3>Compartilhe e fique tranquilo</h3>
+              <p>
+                Adicione arquivos, convide outras pessoas com um código fácil e conte com proteção automática contra exclusões e arquivos gigantes.
+              </p>
+            </div>
+          </article>
+        </div>
+
         <div class="arch-grid">
-          <!-- Diagrama 1: Arquitetura Geral -->
-          <article class="spotlight-card diagram-card diagram-card--wide">
-            <div class="card-surface">
-              <div class="diagram-header">
-                <div>
-                  <h3>1. Arquitetura Multiplataforma Direta (Sem Servidor Central)</h3>
-                  <p>
-                    Regra de negócio única em TypeScript combinada com motores nativos locais em Go (PC) e Kotlin (Android).
-                  </p>
-                </div>
-                <span class="diagram-tag">Componentes</span>
-              </div>
-
-              <div class="diagram-canvas">
-                <svg viewBox="0 0 880 310" role="img" aria-label="Diagrama da arquitetura de componentes do DriveSync mostrando cliente Desktop Electron + Go, pacote compartilhado @drivesync/shared, cliente Android Capacitor + Kotlin e comunicação direta com a Google Drive API v3 e pasta oculta .drivesync.">
-                  <defs>
-                    <marker id="d1-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
-                    </marker>
-                    <marker id="d1-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#22d3ee" />
-                    </marker>
-                  </defs>
-
-                  <!-- Left Desktop Block -->
-                  <rect x="20" y="18" width="290" height="114" rx="10" fill="#0f172a" stroke="#3b82f6" stroke-width="1.8" />
-                  <text x="36" y="44" font-family="Space Grotesk, sans-serif" font-size="15" font-weight="700" fill="#f8fafc">Desktop (Windows &amp; Linux)</text>
-                  <text x="36" y="66" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Electron + React • Tray + Waybar bridge</text>
-                  <text x="36" y="86" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#60a5fa">drivesyncd (Go) :127.0.0.1 + WebSocket /ws</text>
-                  <text x="36" y="106" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#94a3b8">fsnotify • SQLite • AES-256-GCM (.vault.key)</text>
-
-                  <!-- Shared Core Middle -->
-                  <rect x="20" y="144" width="290" height="46" rx="8" fill="rgba(16,185,129,0.12)" stroke="#10b981" stroke-width="1.6" />
-                  <text x="165" y="164" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12.5" font-weight="600" fill="#34d399">@drivesync/shared (TypeScript)</text>
-                  <text x="165" y="180" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#a7f3d0">4 GiB Cap • formatStoragePath • isSenderAllowed • DS1</text>
-
-                  <!-- Left Android Block -->
-                  <rect x="20" y="202" width="290" height="92" rx="10" fill="#0f172a" stroke="#22d3ee" stroke-width="1.8" />
-                  <text x="36" y="227" font-family="Space Grotesk, sans-serif" font-size="15" font-weight="700" fill="#f8fafc">Mobile (Android 7+)</text>
-                  <text x="36" y="248" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Capacitor + React • Plugin nativo Kotlin</text>
-                  <text x="36" y="268" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#22d3ee">SAF DocumentFile • MobileStateDb (SQLite)</text>
-                  <text x="36" y="284" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#94a3b8">WorkManager (≥15 min) • BootReceiver</text>
-
-                  <!-- Direct bidirectional HTTPS arrows -->
-                  <line x1="316" y1="75" x2="516" y2="124" stroke="#60a5fa" stroke-width="2.2" marker-start="url(#d1-blue)" marker-end="url(#d1-blue)" />
-                  <rect x="358" y="64" width="122" height="22" rx="11" fill="#0b1220" stroke="#3b82f6" />
-                  <text x="419" y="79" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#bfdbfe">HTTPS / OAuth2</text>
-
-                  <line x1="316" y1="248" x2="516" y2="188" stroke="#22d3ee" stroke-width="2.2" marker-start="url(#d1-cyan)" marker-end="url(#d1-cyan)" />
-                  <rect x="358" y="218" width="122" height="22" rx="11" fill="#0b1220" stroke="#22d3ee" />
-                  <text x="419" y="233" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#cffafe">HTTPS / Drive v3</text>
-
-                  <!-- Right Cloud Card -->
-                  <rect x="524" y="34" width="336" height="242" rx="14" fill="rgba(37,99,235,0.08)" stroke="#3b82f6" stroke-width="2" />
-                  <text x="692" y="66" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Google Drive (Nuvem Única)</text>
-                  <text x="692" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#93c5fd">OAuth 2.0 + Google Drive API v3</text>
-
-                  <!-- Inner .drivesync box -->
-                  <rect x="546" y="106" width="292" height="148" rx="10" fill="#0b111e" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5 3" />
-                  <text x="692" y="130" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600" fill="#34d399">Pasta de Controle: .drivesync/</text>
-                  <text x="564" y="156" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#e2e8f0">• properties: ds_folder_kind, ds_join_code</text>
-                  <text x="564" y="178" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#e2e8f0">• .drivesync/folder-config.json</text>
-                  <text x="564" y="200" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#e2e8f0">• .drivesync/devices/&lt;deviceId&gt;.json</text>
-                  <text x="564" y="228" font-family="Inter, sans-serif" font-size="11.5" fill="#94a3b8">Coordena presença e descoberta entre PCs e celular</text>
-                </svg>
-              </div>
-              <div class="diagram-caption">
-                Nenhuma credencial ou arquivo passa por servidor de terceiros: tanto o <code>drivesyncd</code> quanto o <code>DriveSyncPlugin</code> falam direto com os endpoints oficiais do Google.
-              </div>
-            </div>
-          </article>
-
-          <!-- Diagrama 2: Autenticação OAuth 2.0 PKCE -->
+          <!-- Diagrama Amigável 1: Seus Aparelhos Juntos -->
           <article class="spotlight-card diagram-card">
             <div class="card-surface">
               <div class="diagram-header">
                 <div>
-                  <h3>2. Login Direto Google OAuth 2.0 (PKCE)</h3>
-                  <p>Conexão em 1 clique sem expor ou pedir chaves manuais na interface.</p>
+                  <h3>Seus computadores e celular sempre iguais</h3>
+                  <p>Coloque um arquivo em um aparelho e ele aparece nos outros sozinho.</p>
                 </div>
-                <span class="diagram-tag">127.0.0.1</span>
+                <span class="diagram-tag">Sua Conta</span>
               </div>
 
               <div class="diagram-canvas">
-                <svg viewBox="0 0 540 315" role="img" aria-label="Diagrama de sequência do fluxo OAuth 2.0 PKCE via loopback local 127.0.0.1:53682 entre UI React, Motor Go/Kotlin, Navegador/Custom Tabs e Google OAuth.">
+                <svg viewBox="0 0 540 265" role="img" aria-label="Ilustração simples mostrando uma foto adicionada no celular sendo enviada para o Google Drive e baixada automaticamente para a pasta escolhida no computador.">
                   <defs>
-                    <marker id="d2-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <marker id="f1-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                       <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
                     </marker>
-                    <marker id="d2-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <marker id="f1-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                       <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
                     </marker>
                   </defs>
 
-                  <!-- Actors -->
-                  <rect x="14" y="14" width="106" height="36" rx="7" fill="#111827" stroke="#64748b" />
-                  <text x="67" y="36" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">UI React</text>
+                  <rect x="16" y="24" width="150" height="114" rx="12" fill="#111827" stroke="#22d3ee" stroke-width="1.6" />
+                  <text x="91" y="54" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">No Celular</text>
+                  <text x="91" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">Você salva uma foto</text>
+                  <text x="91" y="94" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">ou documento na</text>
+                  <text x="91" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#67e8f9">Memória interna/Pasta</text>
 
-                  <rect x="144" y="14" width="124" height="36" rx="7" fill="#111827" stroke="#3b82f6" />
-                  <text x="206" y="31" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12" font-weight="700" fill="#93c5fd">Go / Kotlin</text>
-                  <text x="206" y="44" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">:53682</text>
+                  <line x1="170" y1="81" x2="206" y2="81" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#f1-blue)" />
 
-                  <rect x="292" y="14" width="106" height="36" rx="7" fill="#111827" stroke="#64748b" />
-                  <text x="345" y="36" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#f8fafc">Navegador</text>
+                  <rect x="212" y="24" width="116" height="114" rx="14" fill="rgba(37,99,235,0.16)" stroke="#3b82f6" stroke-width="1.8" />
+                  <circle cx="270" cy="60" r="17" fill="#2563eb" />
+                  <path d="M261 65h17a4.5 4.5 0 0 0 .7-9 6.5 6.5 0 0 0-12.5-1.4 5 5 0 0 0-5.2 10.4Z" fill="#ffffff" />
+                  <text x="270" y="97" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">Google Drive</text>
+                  <text x="270" y="116" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" fill="#bfdbfe">Envia na hora</text>
 
-                  <rect x="422" y="14" width="106" height="36" rx="7" fill="#111827" stroke="#10b981" />
-                  <text x="475" y="36" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#6ee7b7">Google OAuth</text>
+                  <line x1="332" y1="81" x2="368" y2="81" stroke="#34d399" stroke-width="2.2" marker-end="url(#f1-green)" />
 
-                  <!-- Lifelines -->
-                  <line x1="67" y1="50" x2="67" y2="296" stroke="#334155" stroke-dasharray="4 4" />
-                  <line x1="206" y1="50" x2="206" y2="296" stroke="#334155" stroke-dasharray="4 4" />
-                  <line x1="345" y1="50" x2="345" y2="296" stroke="#334155" stroke-dasharray="4 4" />
-                  <line x1="475" y1="50" x2="475" y2="296" stroke="#334155" stroke-dasharray="4 4" />
+                  <rect x="374" y="24" width="150" height="114" rx="12" fill="#111827" stroke="#10b981" stroke-width="1.6" />
+                  <text x="449" y="54" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">No Seu PC</text>
+                  <text x="449" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">Aparece sozinho na</text>
+                  <text x="449" y="94" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">pasta que você</text>
+                  <text x="449" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#6ee7b7">escolheu guardar</text>
 
-                  <line x1="67" y1="84" x2="200" y2="84" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#d2-blue)" />
-                  <text x="133" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#e2e8f0">1. Conectar Drive</text>
-
-                  <line x1="206" y1="120" x2="339" y2="120" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#d2-blue)" />
-                  <text x="275" y="112" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#93c5fd">2. Abre Custom Tabs + PKCE</text>
-
-                  <line x1="345" y1="156" x2="469" y2="156" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#d2-blue)" />
-                  <text x="410" y="148" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#e2e8f0">3. Consentimento</text>
-
-                  <line x1="475" y1="194" x2="212" y2="194" stroke="#34d399" stroke-width="1.8" marker-end="url(#d2-green)" />
-                  <text x="345" y="186" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#6ee7b7">4. Loopback ?code=... (volta pro app)</text>
-
-                  <line x1="206" y1="232" x2="469" y2="232" stroke="#34d399" stroke-width="1.8" marker-end="url(#d2-green)" />
-                  <text x="338" y="224" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#a7f3d0">5. POST /token &rarr; access + refresh</text>
-
-                  <rect x="136" y="250" width="142" height="34" rx="6" fill="#0f172a" stroke="#3b82f6" />
-                  <text x="207" y="271" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#bfdbfe">6. Cifra + Descobre Pastas</text>
-
-                  <line x1="136" y1="268" x2="73" y2="268" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#d2-blue)" />
+                  <!-- Bottom device discovery banner inside diagram -->
+                  <rect x="16" y="162" width="508" height="82" rx="12" fill="#0f172a" stroke="#334155" />
+                  <text x="34" y="188" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#93c5fd">Comprou um celular ou computador novo?</text>
+                  <text x="34" y="210" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">É só fazer login no mesmo Google: o app lista todos os seus outros aparelhos</text>
+                  <text x="34" y="228" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">e pergunta onde você quer salvar cada pasta nesse novo dispositivo.</text>
                 </svg>
               </div>
               <div class="diagram-caption">
-                Credenciais OAuth vêm embutidas no build (<code>-ldflags</code> Go e <code>BuildConfig</code> Android). No celular, após o callback, traz o app ao foco e busca pastas da conta.
+                Você sempre tem liberdade para escolher exatamente em qual pasta do PC ou do celular seus arquivos serão armazenados.
               </div>
             </div>
           </article>
 
-          <!-- Diagrama 3: Trava 4 GiB & Descoberta .drivesync -->
+          <!-- Diagrama Amigável 2: Dupla Proteção -->
           <article class="spotlight-card diagram-card">
             <div class="card-surface">
               <div class="diagram-header">
                 <div>
-                  <h3>3. Pipeline de Sync, Trava 4 GiB e Descoberta</h3>
-                  <p>Validação preventiva local + sincronização automática entre aparelhos da conta.</p>
+                  <h3>Dupla proteção sem precisar configurar nada</h3>
+                  <p>Evita perda de arquivos importantes e travamentos na sua internet.</p>
                 </div>
-                <span class="diagram-tag">.drivesync</span>
+                <span class="diagram-tag">Proteção</span>
               </div>
 
               <div class="diagram-canvas">
-                <svg viewBox="0 0 540 315" role="img" aria-label="Diagrama de fluxo de sincronização local mostrando verificação de 4 GiB MAX_UPLOAD_BYTES, bloqueio preventivo na aba Atividade, envio à Google Drive API v3 e descoberta multi-dispositivo.">
-                  <defs>
-                    <marker id="d3-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
-                    </marker>
-                    <marker id="d3-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#fbbf24" />
-                    </marker>
-                    <marker id="d3-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
-                    </marker>
-                  </defs>
+                <svg viewBox="0 0 540 265" role="img" aria-label="Ilustração mostrando duas proteções automáticas: 1) Se alguém apagar um arquivo no Google Drive, a cópia já baixada continua salva no seu aparelho; 2) Arquivos maiores que 4 GB ficam barrados automaticamente antes de tentar enviar.">
+                  <!-- Top Box: Delete protection -->
+                  <rect x="16" y="20" width="508" height="104" rx="12" fill="#0f172a" stroke="#10b981" stroke-width="1.6" />
+                  <circle cx="52" cy="72" r="20" fill="rgba(16,185,129,0.16)" />
+                  <path d="M52 58l11 4.5v8.5c0 7-4.7 13-11 15-6.3-2-11-8-11-15v-8.5L52 58Z" fill="none" stroke="#34d399" stroke-width="2" />
+                  <text x="88" y="54" font-family="Space Grotesk, sans-serif" font-size="14.5" font-weight="700" fill="#6ee7b7">Proteção contra exclusões na nuvem</text>
+                  <text x="88" y="76" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">Se outra pessoa (ou alguém por engano) apagar um arquivo no Google Drive,</text>
+                  <text x="88" y="96" font-family="Inter, sans-serif" font-size="12.5" fill="#cbd5e1">o DriveSync mantém a cópia que você já baixou segura no seu PC ou celular.</text>
 
-                  <text x="16" y="28" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#93c5fd">PIPELINE DE UPLOAD &amp; TRAVA LOCAL</text>
-                  <rect x="16" y="42" width="136" height="54" rx="8" fill="#111827" stroke="#64748b" />
-                  <text x="84" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#f8fafc">Gatilho Local</text>
-                  <text x="84" y="83" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#94a3b8">fsnotify / Worker</text>
-
-                  <line x1="152" y1="69" x2="188" y2="69" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#d3-blue)" />
-
-                  <rect x="194" y="42" width="142" height="54" rx="8" fill="#0f172a" stroke="#3b82f6" stroke-width="1.8" />
-                  <text x="265" y="65" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600" fill="#93c5fd">&lt;= 4 GiB?</text>
-                  <text x="265" y="83" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">MAX_UPLOAD_BYTES</text>
-
-                  <!-- Blocked branch -->
-                  <line x1="265" y1="96" x2="265" y2="128" stroke="#fbbf24" stroke-width="1.8" marker-end="url(#d3-amber)" />
-                  <text x="275" y="117" font-family="Inter, sans-serif" font-size="10.5" font-weight="600" fill="#fbbf24">&gt; 4 GiB</text>
-                  <rect x="180" y="134" width="170" height="34" rx="7" fill="rgba(245,158,11,0.12)" stroke="#f59e0b" />
-                  <text x="265" y="155" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#fde68a">Bloqueado em Atividade</text>
-
-                  <!-- Approved branch -->
-                  <line x1="336" y1="69" x2="380" y2="69" stroke="#34d399" stroke-width="1.8" marker-end="url(#d3-green)" />
-                  <text x="357" y="61" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#6ee7b7">OK</text>
-                  <rect x="386" y="42" width="138" height="54" rx="8" fill="rgba(16,185,129,0.12)" stroke="#10b981" />
-                  <text x="455" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#6ee7b7">Drive API v3</text>
-                  <text x="455" y="83" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#a7f3d0">Sync + MD5/Hash</text>
-
-                  <line x1="16" y1="186" x2="524" y2="186" stroke="#1e293b" />
-                  <text x="16" y="210" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#34d399">DESCOBERTA AUTOMÁTICA NA MESMA CONTA</text>
-
-                  <rect x="16" y="224" width="154" height="72" rx="8" fill="#111827" stroke="#10b981" />
-                  <text x="93" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" fill="#6ee7b7">Busca no Drive</text>
-                  <text x="93" y="264" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#cbd5e1">ds_folder_kind</text>
-                  <text x="93" y="281" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#94a3b8">.drivesync/*</text>
-
-                  <line x1="170" y1="260" x2="198" y2="260" stroke="#34d399" stroke-width="1.8" marker-end="url(#d3-green)" />
-
-                  <rect x="204" y="224" width="152" height="72" rx="8" fill="#111827" stroke="#3b82f6" />
-                  <text x="280" y="246" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#93c5fd">Lista Dispositivos</text>
-                  <text x="280" y="264" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#cbd5e1">PCs + Celulares</text>
-                  <text x="280" y="281" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#94a3b8">na aba Dispositivos</text>
-
-                  <line x1="356" y1="260" x2="384" y2="260" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#d3-blue)" />
-
-                  <rect x="390" y="224" width="134" height="72" rx="8" fill="#111827" stroke="#22d3ee" />
-                  <text x="457" y="246" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#67e8f9">Destino Local</text>
-                  <text x="457" y="264" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#cbd5e1">Pasta base única</text>
-                  <text x="457" y="281" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#94a3b8">ou pasta individual</text>
+                  <!-- Bottom Box: 4GB limit -->
+                  <rect x="16" y="142" width="508" height="104" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="1.6" />
+                  <circle cx="52" cy="194" r="20" fill="rgba(245,158,11,0.16)" />
+                  <circle cx="52" cy="194" r="11" fill="none" stroke="#fbbf24" stroke-width="2" />
+                  <line x1="52" y1="189" x2="52" y2="195" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" />
+                  <circle cx="52" cy="199" r="1.2" fill="#fbbf24" />
+                  <text x="88" y="176" font-family="Space Grotesk, sans-serif" font-size="14.5" font-weight="700" fill="#fde68a">Trava inteligente para arquivos maiores que 4 GB</text>
+                  <text x="88" y="198" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">Arquivos gigantes (como vídeos pesados ou imagens de disco acima de 4 GB)</text>
+                  <text x="88" y="218" font-family="Inter, sans-serif" font-size="12.5" fill="#cbd5e1">são barrados antes de enviar e avisados no app, evitando gastar toda a sua internet.</text>
                 </svg>
               </div>
               <div class="diagram-caption">
-                Ao conectar um novo PC ou celular no mesmo Google, o app exibe imediatamente os aparelhos conectados e as pastas da nuvem prontas para escolher onde salvar.
+                Se preferir espelhar exclusões de verdade em alguma pasta específica, você também pode ativar a Quarentena nas Opções da pasta.
               </div>
             </div>
           </article>
 
-          <!-- Diagrama 4: Modelo Drive Master -->
-          <article class="spotlight-card diagram-card diagram-card--wide">
+          <!-- Diagrama Amigável 3: Para Grupos / Multi-Usuários (#equipes) -->
+          <article id="equipes" class="spotlight-card diagram-card diagram-card--wide">
             <div class="card-surface">
               <div class="diagram-header">
                 <div>
-                  <h3>4. Governança Drive Master: Convites, Filtro de Remetentes e Proteção Local</h3>
+                  <h3>Vários usuários juntos no Modo Drive Master (Amigos, Turma ou Equipe)</h3>
                   <p>
-                    Controle fino de quem envia arquivos em pastas compartilhadas sem apagar o que já foi baixado para o seu aparelho.
+                    Compartilhe uma pasta usando apenas um código fácil e escolha de quem você quer baixar arquivos no seu aparelho.
                   </p>
                 </div>
-                <span class="diagram-tag">Drive Master</span>
+                <span class="diagram-tag">Multi-Usuários</span>
               </div>
 
               <div class="diagram-canvas">
-                <svg viewBox="0 0 880 230" role="img" aria-label="Diagrama do modelo Drive Master mostrando entrada por código DS1/DS-XXXX-XXXX, direção bidirectional ou receive_only, filtro isSenderAllowed via ds_sender_email e proteção de exclusão keep_local ou quarentena.">
+                <svg viewBox="0 0 860 245" role="img" aria-label="Diagrama em linguagem simples mostrando vários usuários (Ana, João, Maria) conectados à mesma pasta compartilhada usando um código curto, enviando arquivos para a pasta, e o usuário principal filtrando facilmente quem pode enviar arquivos para o seu computador ou celular.">
                   <defs>
-                    <marker id="d4-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <marker id="g-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
+                    </marker>
+                    <marker id="g-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M0 1 L10 5 L0 9 z" fill="#f87171" />
+                    </marker>
+                    <marker id="g-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                       <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
                     </marker>
                   </defs>
 
-                  <rect x="20" y="20" width="190" height="90" rx="10" fill="#111827" stroke="#64748b" stroke-width="1.6" />
-                  <text x="115" y="45" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">1. Convite por Código</text>
-                  <text x="115" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#60a5fa">DS-XXXX-XXXX</text>
-                  <text x="115" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#94a3b8">DS1.&lt;id&gt;.código ou URL</text>
+                  <!-- People Column -->
+                  <rect x="18" y="20" width="228" height="60" rx="11" fill="#111827" stroke="#10b981" stroke-width="1.6" />
+                  <circle cx="46" cy="50" r="14" fill="#059669" />
+                  <text x="46" y="55" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#ffffff">J</text>
+                  <text x="72" y="46" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">João (Aceito)</text>
+                  <text x="72" y="64" font-family="Inter, sans-serif" font-size="11.5" fill="#6ee7b7">Envia documentos para a pasta</text>
 
-                  <line x1="210" y1="65" x2="246" y2="65" stroke="#60a5fa" stroke-width="2" marker-end="url(#d4-blue)" />
+                  <rect x="18" y="92" width="228" height="60" rx="11" fill="#111827" stroke="#3b82f6" stroke-width="1.6" />
+                  <circle cx="46" cy="122" r="14" fill="#2563eb" />
+                  <text x="46" y="127" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#ffffff">A</text>
+                  <text x="72" y="118" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">Ana (Aceita)</text>
+                  <text x="72" y="136" font-family="Inter, sans-serif" font-size="11.5" fill="#93c5fd">Envia fotos da viagem no celular</text>
 
-                  <rect x="252" y="20" width="190" height="90" rx="10" fill="#111827" stroke="#3b82f6" stroke-width="1.6" />
-                  <text x="347" y="45" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#93c5fd">2. Modo da Pasta</text>
-                  <text x="347" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#e2e8f0">bidirectional</text>
-                  <text x="347" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8">receive_only (só baixa)</text>
+                  <rect x="18" y="164" width="228" height="60" rx="11" fill="#111827" stroke="#ef4444" stroke-width="1.6" stroke-dasharray="4 3" />
+                  <circle cx="46" cy="194" r="14" fill="#b91c1c" />
+                  <text x="46" y="199" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#ffffff">L</text>
+                  <text x="72" y="190" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">Luiz (Pausado por você)</text>
+                  <text x="72" y="208" font-family="Inter, sans-serif" font-size="11.5" fill="#fca5a5">Arquivos dele não descem no seu PC</text>
 
-                  <line x1="442" y1="65" x2="478" y2="65" stroke="#60a5fa" stroke-width="2" marker-end="url(#d4-blue)" />
+                  <!-- Arrows to Shared Folder -->
+                  <line x1="250" y1="50" x2="328" y2="102" stroke="#34d399" stroke-width="2" marker-end="url(#g-green)" />
+                  <line x1="250" y1="122" x2="324" y2="122" stroke="#60a5fa" stroke-width="2" marker-end="url(#g-blue)" />
+                  <line x1="250" y1="194" x2="328" y2="142" stroke="#f87171" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#g-red)" />
 
-                  <rect x="484" y="20" width="188" height="90" rx="10" fill="#111827" stroke="#10b981" stroke-width="1.6" />
-                  <text x="578" y="45" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#6ee7b7">3. Filtro Remetente</text>
-                  <text x="578" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11.5" fill="#e2e8f0">isSenderAllowed()</text>
-                  <text x="578" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#a7f3d0">all • allowlist • blocklist</text>
+                  <!-- Center Master Folder -->
+                  <rect x="334" y="42" width="228" height="160" rx="16" fill="rgba(37,99,235,0.12)" stroke="#3b82f6" stroke-width="2" />
+                  <text x="448" y="74" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="16" font-weight="700" fill="#ffffff">Pasta Compartilhada</text>
+                  <text x="448" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#93c5fd">Modo Drive Master</text>
+                  <rect x="366" y="112" width="164" height="28" rx="14" fill="#0f172a" stroke="#3b82f6" />
+                  <text x="448" y="130" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600" fill="#ffffff">Convite: DS-4829-KP7M</text>
+                  <text x="448" y="164" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">Cada pessoa decide se quer apenas</text>
+                  <text x="448" y="182" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">receber ou enviar e receber arquivos</text>
 
-                  <line x1="672" y1="65" x2="708" y2="65" stroke="#60a5fa" stroke-width="2" marker-end="url(#d4-blue)" />
+                  <!-- Arrow to Your Device -->
+                  <line x1="566" y1="122" x2="626" y2="122" stroke="#34d399" stroke-width="2.4" marker-end="url(#g-green)" />
 
-                  <rect x="714" y="20" width="146" height="90" rx="10" fill="rgba(16,185,129,0.1)" stroke="#10b981" stroke-width="1.6" />
-                  <text x="787" y="45" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#6ee7b7">4. Cópia Local</text>
-                  <text x="787" y="68" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#e2e8f0">Aprovados sincronizam</text>
-                  <text x="787" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">Bloqueados em Atividade</text>
-
-                  <!-- Bottom Deletion Policy Bar -->
-                  <rect x="20" y="132" width="840" height="80" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
-                  <text x="38" y="156" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#f8fafc">Política de exclusão quando alguém apaga um arquivo no Google Drive:</text>
-                  <text x="38" y="182" font-family="JetBrains Mono, monospace" font-size="12" fill="#34d399">keep_local (padrão)</text>
-                  <text x="196" y="182" font-family="Inter, sans-serif" font-size="12.5" fill="#cbd5e1">&rarr; Mantém o arquivo salvo intacto no PC/celular</text>
-                  <text x="498" y="182" font-family="JetBrains Mono, monospace" font-size="12" fill="#60a5fa">mirror_trash</text>
-                  <text x="602" y="182" font-family="Inter, sans-serif" font-size="12.5" fill="#cbd5e1">&rarr; Move para .DriveSync-Quarentena</text>
+                  <!-- Right Result Card -->
+                  <rect x="632" y="42" width="210" height="160" rx="16" fill="rgba(16,185,129,0.1)" stroke="#10b981" stroke-width="1.8" />
+                  <text x="737" y="76" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="15.5" font-weight="700" fill="#6ee7b7">No Seu Aparelho</text>
+                  <text x="737" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">Chegam apenas os</text>
+                  <text x="737" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">arquivos de João e Ana,</text>
+                  <text x="737" y="142" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">sem bagunçar sua pasta</text>
+                  <text x="737" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">e sem incomodar o grupo.</text>
                 </svg>
               </div>
               <div class="diagram-caption">
-                Cada remetente é identificado via <code>appProperties</code> (<code>ds_sender_email</code> / <code>ds_sender_name</code>) e metadados do usuário no Drive.
+                Ideal para grupos de trabalho, famílias, aulas ou projetos: basta compartilhar o código para outras pessoas entrarem com 1 clique.
               </div>
             </div>
           </article>
         </div>
       </section>
 
-      <!-- Essential Features (6 Bento Cards) -->
+      <!-- Essential Benefits Section -->
       <section id="essencial" class="section container" style="padding-top: 24px">
         <div class="section-head">
-          <h2>Somente o essencial, bem feito</h2>
-          <p>Recursos pensados para compartilhar e espelhar pastas entre todos os seus aparelhos.</p>
+          <h2>Por que escolher o DriveSync?</h2>
+          <p>Tudo pensado para funcionar de primeira no computador e no celular.</p>
         </div>
 
         <div class="bento-grid">
@@ -617,9 +610,9 @@
                 <circle cx="9" cy="7" r="4" />
                 <polyline points="16 11 18 13 22 9" />
               </svg>
-              <h3>Filtro de remetentes no Drive Master</h3>
+              <h3>Pastas compartilhadas sob seu controle</h3>
               <p>
-                Em pastas compartilhadas, escolha de quem você quer baixar arquivos (ex.: aceitar de João e ignorar de Luiz) sem afetar o restante do grupo.
+                Em grupos do Drive Master, escolha receber arquivos de todo mundo, apenas de pessoas aprovadas ou bloquear alguém específico sem excluir essa pessoa do Google Drive.
               </p>
             </div>
           </div>
@@ -629,23 +622,9 @@
               <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              <h3>Proteção contra exclusões remotas</h3>
+              <h3>Seus arquivos nunca somem por engano</h3>
               <p>
-                Por padrão, o que você já baixou permanece seguro no seu computador ou celular caso alguém apague o arquivo lá no Drive.
-              </p>
-            </div>
-          </div>
-
-          <div class="spotlight-card bento-card">
-            <div class="card-surface">
-              <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <h3>Trava fixa de 4 GB no upload</h3>
-              <p>
-                Arquivos acima de 4 GiB são bloqueados automaticamente antes do envio e registrados na aba Atividade para evitar travamentos.
+                Por padrão, se alguém apagar um arquivo no Google Drive, a cópia que já foi baixada para o seu computador ou celular continua protegida e intacta.
               </p>
             </div>
           </div>
@@ -657,9 +636,9 @@
                 <line x1="8" y1="21" x2="16" y2="21" />
                 <line x1="12" y1="17" x2="12" y2="21" />
               </svg>
-              <h3>Dispositivos e convite por código</h3>
+              <h3>Troca de arquivos entre PC e celular sem cabos</h3>
               <p>
-                Conecte novos aparelhos em segundos com códigos DS-XXXX-XXXX ou links e acompanhe todos os PCs e celulares ligados à conta.
+                Conectou na mesma conta Google? O app descobre suas pastas e seus aparelhos automaticamente e pergunta onde você deseja salvar tudo no seu dispositivo.
               </p>
             </div>
           </div>
@@ -667,11 +646,29 @@
           <div class="spotlight-card bento-card">
             <div class="card-surface">
               <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
-              <h3>Descoberta automática na conta</h3>
+              <h3>Convite rápido para novos membros</h3>
               <p>
-                Ao entrar com o mesmo e-mail Google em outro PC ou Android, suas pastas e aparelhos sincronizados aparecem automaticamente para escolher onde salvar.
+                Gere um código curto ou link direto da pasta para conectar colegas, familiares ou outros computadores e celulares em poucos segundos.
+              </p>
+            </div>
+          </div>
+
+          <div class="spotlight-card bento-card">
+            <div class="card-surface">
+              <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <h3>Internet sempre leve (trava de 4 GB)</h3>
+              <p>
+                Arquivos acima de 4 GB são barrados automaticamente antes do envio e mostrados na aba de Atividade para você nunca perder tempo nem pacote de dados.
               </p>
             </div>
           </div>
@@ -681,119 +678,21 @@
               <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
-              <h3>Navegador local e caminhos legíveis</h3>
+              <h3>Organize e envie direto pelo aplicativo</h3>
               <p>
-                Importe arquivos ou pastas inteiras, crie subpastas e visualize caminhos limpos como <code>Memória interna/Pasta</code> no Android SAF.
+                Navegue pelos arquivos, importe fotos ou pastas inteiras, crie novas subpastas e altere a pasta de armazenamento sempre que quiser nas Opções.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Technical Architecture Spec Tables -->
-      <section id="arquitetura" class="section container" style="padding-top: 24px">
-        <div class="section-head">
-          <h2>Arquitetura Técnica e Entrega Contínua</h2>
-          <p>
-            Mesma versão, contrato único e pipeline automatizado garantindo paridade real entre Windows, Linux e Android.
-          </p>
-        </div>
-
-        <div class="spec-stack">
-          <div class="spotlight-card spec-table-card">
-            <div class="card-surface">
-              <h3 class="spec-table-title">Camadas do Monorepo</h3>
-              <div class="spec-table-wrap">
-                <table class="spec-table">
-                  <thead>
-                    <tr>
-                      <th>Camada</th>
-                      <th>Stack</th>
-                      <th>Responsabilidade &amp; Segurança</th>
-                      <th>Execução</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Compartilhada</strong><br /><code>@drivesync/shared</code></td>
-                      <td>TypeScript (SemVer 2.0.0)</td>
-                      <td>Regras únicas: <code>MAX_UPLOAD_BYTES</code> (4 GiB), <code>formatStoragePath</code>, <code>isSenderAllowed</code>, parser <code>DS1</code></td>
-                      <td>Validado por <code>bump-version.mjs --check</code></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Desktop PC</strong><br />Windows &amp; Linux</td>
-                      <td>Electron + React + daemon Go (<code>drivesyncd</code>)</td>
-                      <td>SQLite local + credenciais OAuth cifradas em AES-256-GCM (<code>.vault.key</code>)</td>
-                      <td>HTTP loopback <code>127.0.0.1</code> + WebSocket <code>/ws</code> + <code>fsnotify</code></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Mobile Android 7+</strong><br />APK (<code>versionCode 300</code>)</td>
-                      <td>Capacitor + React + Kotlin (<code>DriveSyncPlugin</code>)</td>
-                      <td><code>MobileStateDb</code> SQLite nativo + URIs persistentes Android SAF (<code>DocumentFile</code>)</td>
-                      <td>Polling foreground + <code>WorkManager</code> (&ge;15 min) + <code>BootReceiver</code></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Coordenação Nuvem</strong><br />Google Drive API v3</td>
-                      <td>Pasta oculta <code>.drivesync/</code></td>
-                      <td>Propriedades <code>ds_folder_kind</code>, <code>folder-config.json</code> e <code>devices/*.json</code></td>
-                      <td>Descoberta automática entre PCs e celulares sem servidor externo</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="spotlight-card spec-table-card">
-            <div class="card-surface">
-              <h3 class="spec-table-title">Pipeline CI/CD e Releases Multiplataforma</h3>
-              <div class="spec-table-wrap">
-                <table class="spec-table">
-                  <thead>
-                    <tr>
-                      <th>Workflow</th>
-                      <th>Gatilho</th>
-                      <th>Verificações e Build</th>
-                      <th>Publicação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong><code>ci.yml</code></strong></td>
-                      <td>Push / Pull Request</td>
-                      <td><code>version:check</code>, <code>typecheck</code>, Vitest (Shared/Desktop/Mobile), <code>go test ./...</code>, testes shell e <code>./gradlew testDebugUnitTest assembleDebug</code></td>
-                      <td>Validação contínua antes de cada release</td>
-                    </tr>
-                    <tr>
-                      <td><strong><code>release.yml</code></strong></td>
-                      <td>Tags SemVer (<code>v*</code>)</td>
-                      <td>Injeção segura de OAuth em compilação (<code>-ldflags</code> Go e <code>BuildConfig</code> Gradle) em paralelo para Win/Linux/Android</td>
-                      <td><code>.exe</code>, <code>.msi</code>, <code>.AppImage</code>, <code>.deb</code>, <code>.rpm</code>, <code>.pacman</code> e <code>DriveSync-Android.apk</code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="arch-cta-bar">
-          <div>
-            <strong style="display: block; font-size: 16px">Quer explorar os diagramas e tabelas técnicas completos?</strong>
-            <span style="font-size: 13.5px; color: var(--ink-muted)">
-              Preparamos um documento técnico dedicado com todos os diagramas da v0.3.0.
-            </span>
-          </div>
-          <a class="btn btn-primary btn-sm" href="architecture.html">Abrir Documento Técnico Completo</a>
-        </div>
-      </section>
-
       <!-- Future Features & Roadmap -->
       <section id="futuro" class="section container" style="padding-top: 24px">
         <div class="section-head">
-          <h2>Futuras Features &amp; Roadmap</h2>
+          <h2>O que vem por aí (Futuras Novidades)</h2>
           <p>
-            Próximos avanços planejados para tornar o DriveSync ainda mais rápido, seguro e presente em mais dispositivos.
+            Estamos evoluindo o DriveSync o tempo todo para facilitar ainda mais o dia a dia entre seus dispositivos e equipes.
           </p>
         </div>
 
@@ -802,14 +701,14 @@
             <div class="card-surface">
               <div class="roadmap-head">
                 <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                 </svg>
-                <span class="roadmap-badge roadmap-badge--next">Próxima Release</span>
+                <span class="roadmap-badge roadmap-badge--next">Em breve</span>
               </div>
-              <h3>Histórico de Versões &amp; Restauração</h3>
+              <h3>Voltar no tempo em qualquer arquivo</h3>
               <p>
-                Linha do tempo visual por arquivo para comparar alterações anteriores no Drive ou restaurar cópias da Quarentena local com 1 clique.
+                Apagou algo ou editou errado? Veja o histórico de versões anteriores de cada documento e restaure com um toque.
               </p>
             </div>
           </article>
@@ -820,11 +719,11 @@
                 <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                 </svg>
-                <span class="roadmap-badge roadmap-badge--next">Próxima Release</span>
+                <span class="roadmap-badge roadmap-badge--next">Em breve</span>
               </div>
-              <h3>Upload Resumível &amp; Limite de Banda</h3>
+              <h3>Retomada automática se a internet cair</h3>
               <p>
-                Retomada automática de arquivos grandes que caíram no meio da conexão, além de agendamento de velocidade máxima por horário.
+                Envios de arquivos grandes continuarão exatamente de onde pararam se o Wi-Fi oscilar, além de permitir limitar a velocidade nos horários de trabalho.
               </p>
             </div>
           </article>
@@ -833,14 +732,14 @@
             <div class="card-surface">
               <div class="roadmap-head">
                 <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <path d="M9 12l2 2 4-4" />
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                <span class="roadmap-badge roadmap-badge--planned">Planejado (v0.4+)</span>
+                <span class="roadmap-badge roadmap-badge--planned">Planejado</span>
               </div>
-              <h3>Cofre Criptografado Ponta a Ponta</h3>
+              <h3>Pastas com senha extra de proteção</h3>
               <p>
-                Pasta opcional com cifragem Zero-Knowledge no dispositivo antes do upload, mantendo o conteúdo ilegível até mesmo na nuvem.
+                Crie cofres pessoais com uma senha exclusiva que protege documentos sensíveis antes mesmo deles irem para a nuvem.
               </p>
             </div>
           </article>
@@ -849,15 +748,13 @@
             <div class="card-surface">
               <div class="roadmap-head">
                 <svg class="bento-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
+                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
                 </svg>
-                <span class="roadmap-badge roadmap-badge--planned">Planejado (v0.4+)</span>
+                <span class="roadmap-badge roadmap-badge--planned">Planejado</span>
               </div>
-              <h3>Arquivos Sob Demanda (Smart Sync)</h3>
+              <h3>Arquivos visíveis sem ocupar espaço</h3>
               <p>
-                Veja todos os arquivos do Drive sem ocupar espaço em disco no PC ou celular, baixando automaticamente apenas quando abrir o arquivo.
+                Navegue por toda a sua nuvem no PC ou no celular quase sem gastar memória interna, baixando cada arquivo só na hora em que precisar abrir.
               </p>
             </div>
           </article>
@@ -873,9 +770,9 @@
                 </svg>
                 <span class="roadmap-badge roadmap-badge--planned">Planejado</span>
               </div>
-              <h3>Auditoria &amp; Cotas no Drive Master</h3>
+              <h3>Painel de atividades para equipes</h3>
               <p>
-                Relatórios exportáveis de atividade por membro da equipe, aprovação prévia de novos envios e cotas por remetente em pastas compartilhadas.
+                Acompanhe quem enviou cada arquivo novo nas pastas compartilhadas, receba notificações inteligentes e aprove envios antes de entrarem no grupo.
               </p>
             </div>
           </article>
@@ -887,11 +784,11 @@
                   <rect x="5" y="2" width="14" height="20" rx="2" />
                   <line x1="12" y1="18" x2="12.01" y2="18" />
                 </svg>
-                <span class="roadmap-badge roadmap-badge--research">Em Pesquisa</span>
+                <span class="roadmap-badge roadmap-badge--research">Em desenvolvimento</span>
               </div>
-              <h3>macOS (.dmg) &amp; iOS (Files.app)</h3>
+              <h3>Chegando para Mac e iPhone</h3>
               <p>
-                Expansão da mesma base Go + React/Capacitor para Apple Silicon/Intel via <code>macOS .dmg</code> e integração nativa com o app Arquivos no iPhone/iPad.
+                Em breve toda a facilidade do DriveSync também estará disponível no macOS e integrado nativamente ao app Arquivos no iPhone e iPad.
               </p>
             </div>
           </article>
@@ -907,7 +804,8 @@
         </div>
 
         <div class="footer-links">
-          <a href="architecture.html">Arquitetura Técnica</a>
+          <a href="#como-funciona">Como Funciona</a>
+          <a href="#futuro">Novidades</a>
           <a href="privacy.html">Privacidade</a>
           <a href="terms.html">Termos de Uso</a>
           <a
@@ -915,14 +813,7 @@
             target="_blank"
             rel="noreferrer"
           >
-            Releases
-          </a>
-          <a
-            href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub
+            Downloads
           </a>
         </div>
       </div>
