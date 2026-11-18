@@ -1,3 +1,21 @@
+/** Versão oficial sincronizada em todo o monorepo (SemVer 2.0.0). */
+export const APP_VERSION = '0.2.0';
+
+/**
+ * Calcula o versionCode inteiro exigido pelo Android / Google Play Store
+ * a partir de uma versão SemVer (MAJOR * 10000 + MINOR * 100 + PATCH).
+ */
+export function computeAndroidVersionCode(version: string = APP_VERSION): number {
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version.trim());
+  if (!match) {
+    throw new Error(`Versão SemVer inválida: ${version}`);
+  }
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  return major * 10000 + minor * 100 + patch;
+}
+
 /**
  * Limite rígido de 4 GiB (4.294.967.296 bytes) por arquivo enviado no upload.
  * Corresponde ao "4,00 GB" reportado pelo explorador de arquivos do Windows.

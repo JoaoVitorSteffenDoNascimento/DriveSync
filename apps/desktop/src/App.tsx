@@ -7,7 +7,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { DaemonSnapshot, FolderRuntimeState } from '@drivesync/shared';
-import { formatBytes } from '@drivesync/shared';
+import { APP_VERSION, formatBytes } from '@drivesync/shared';
 import { DaemonClient } from './api/daemonClient';
 import { ConnectFolderWizard } from './components/ConnectFolderWizard';
 import { ConnectGoogleModal } from './components/ConnectGoogleModal';
@@ -141,7 +141,7 @@ export const App: React.FC<{ overrideClient?: DaemonClient }> = ({ overrideClien
           </div>
           <div>
             <div className="brand-title">DriveSync</div>
-            <div className="brand-sub">Simples e seguro</div>
+            <div className="brand-sub">Simples e seguro • v{APP_VERSION}</div>
           </div>
         </div>
 

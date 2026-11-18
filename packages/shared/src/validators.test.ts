@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_VERSION,
   MAX_UPLOAD_BYTES,
+  computeAndroidVersionCode,
   formatBytes,
   isSenderAllowed,
   isUploadWithinLimit,
@@ -90,5 +92,12 @@ describe('regras compartilhadas DriveSync', () => {
       shortCode: 'DS-4829-KP7M',
     });
     expect(parseFolderCodeOrLink('abc')).toEqual({ kind: 'invalid' });
+  });
+
+  it('mantém versão SemVer 2.0.0 e calcula versionCode compatível com Google Play Store', () => {
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(computeAndroidVersionCode('0.2.0')).toBe(200);
+    expect(computeAndroidVersionCode('1.2.3')).toBe(10203);
+    expect(computeAndroidVersionCode(APP_VERSION)).toBeGreaterThanOrEqual(200);
   });
 });

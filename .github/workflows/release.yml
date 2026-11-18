@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag da release (ex.: v0.1.0)'
+        description: 'Tag da release (vazio usa a versão do package.json, ex.: v0.2.0)'
         required: false
-        default: 'v0.1.0'
+        default: ''
 
 permissions:
   contents: write
@@ -170,13 +170,19 @@ jobs:
     needs: [build-linux, build-windows, build-android]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Resolve release tag
         id: meta
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
+            echo "tag=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ github.event.inputs.tag_name || 'v0.1.0' }}" >> "$GITHUB_OUTPUT"
+            PKG_VER=$(node -p "require('./package.json').version")
+            echo "tag=v${PKG_VER}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Download all platform installers

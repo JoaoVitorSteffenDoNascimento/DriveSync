@@ -571,7 +571,7 @@ class MobileSyncEngine(
                     deviceName = settings.deviceName,
                     platform = "android",
                     arch = Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64",
-                    appVersion = "0.1.0",
+                    appVersion = BuildConfig.VERSION_NAME,
                     accountEmail = account.email,
                     syncMode = folder.direction,
                     folderId = folder.id,

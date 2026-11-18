@@ -1,6 +1,6 @@
 {
   "name": "drivesync-monorepo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "DriveSync — Sincronização simples multiplataforma com Google Drive, modo Master, filtro de remetentes e trava de 4 GB",
   "workspaces": [
@@ -19,7 +19,9 @@
     "test:mobile": "npm run test --workspace=@drivesync/mobile",
     "test:engine": "cd apps/engine && go test ./...",
     "test:legacy": "bash tests/validate-sync.sh --local",
-    "test": "npm run test:shared && npm run test:desktop && npm run test:mobile && npm run test:engine && npm run test:legacy",
+    "test": "npm run version:check && npm run test:shared && npm run test:desktop && npm run test:mobile && npm run test:engine && npm run test:legacy",
+    "version:bump": "node packaging/scripts/bump-version.mjs",
+    "version:check": "node packaging/scripts/bump-version.mjs --check",
     "pack:linux": "bash packaging/scripts/build-engine.sh current && npm run build --workspace=@drivesync/shared && npm run pack:linux --workspace=@drivesync/desktop",
     "pack:win": "bash packaging/scripts/build-engine.sh windows && npm run build --workspace=@drivesync/shared && npm run pack:win --workspace=@drivesync/desktop",
     "install:linux": "bash packaging/scripts/install-local-linux.sh",

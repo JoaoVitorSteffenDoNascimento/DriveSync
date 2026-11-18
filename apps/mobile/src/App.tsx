@@ -32,6 +32,7 @@ import {
   Users,
 } from 'lucide-react';
 import {
+  APP_VERSION,
   formatBytes,
   normalizeEmail,
   type DiscoveredRemoteFolder,
@@ -279,7 +280,7 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
           <div style={{ minWidth: 0 }}>
             <strong style={{ fontSize: 16 }}>DriveSync</strong>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {snap.settings.deviceName} • {formatBytes(snap.settings.maxUploadBytes)}
+              {snap.settings.deviceName} • v{APP_VERSION} • {formatBytes(snap.settings.maxUploadBytes)}
             </div>
           </div>
         </div>
