@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCircle2, Copy, ExternalLink, LogOut, Share2, ShieldCheck } from 'lucide-react';
+import { Check, CheckCircle2, Copy, ExternalLink, FolderOpen, LogOut, Share2, ShieldCheck } from 'lucide-react';
 import type { AppSettings, DaemonSnapshot, RemoteDeletePolicy } from '@drivesync/shared';
 import { formatBytes } from '@drivesync/shared';
 import type { DaemonClient } from '../api/daemonClient';
@@ -142,6 +142,44 @@ export const SettingsPage: React.FC<Props> = ({
               setForm({ ...form, pollIntervalSeconds: Math.max(15, Number(e.target.value) || 45) })
             }
           />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="cfg-sync-root">
+            Pasta base onde novas pastas sincronizadas da sua conta serão salvas neste PC
+          </label>
+          <div className="row-inline">
+            <input
+              id="cfg-sync-root"
+              className="input"
+              placeholder="Ex.: /home/usuario/DriveSync ou C:\Users\Usuario\DriveSync"
+              value={form.syncRootPath ?? ''}
+              onChange={(e) => setForm({ ...form, syncRootPath: e.target.value })}
+            />
+            {window.driveSyncDesktop && (
+              <button
+                type="button"
+                className="btn"
+                onClick={async () => {
+                  const chosen = await window.driveSyncDesktop?.selectLocalFolder();
+                  if (chosen) setForm({ ...form, syncRootPath: chosen });
+                }}
+              >
+                <FolderOpen size={15} /> Escolher pasta
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="row-inline" style={{ cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={Boolean(form.autoSyncAccountFolders)}
+              onChange={(e) => setForm({ ...form, autoSyncAccountFolders: e.target.checked })}
+            />
+            <span>Conectar automaticamente pastas encontradas na mesma conta Google usando essa pasta base</span>
+          </label>
         </div>
 
         <div className="form-group">

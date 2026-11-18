@@ -181,14 +181,16 @@ type AccountInfo struct {
 }
 
 type AppSettings struct {
-	DeviceID              string             `json:"deviceId"`
-	DeviceName            string             `json:"deviceName"`
-	MaxUploadBytes        int64              `json:"maxUploadBytes"`
-	PollIntervalSeconds   int                `json:"pollIntervalSeconds"`
-	StartOnBoot           bool               `json:"startOnBoot"`
-	MinimizeToTray        bool               `json:"minimizeToTray"`
-	EnableWaybarBridge    bool               `json:"enableWaybarBridge"`
-	DefaultOnRemoteDelete RemoteDeletePolicy `json:"defaultOnRemoteDelete"`
+	DeviceID               string             `json:"deviceId"`
+	DeviceName             string             `json:"deviceName"`
+	MaxUploadBytes         int64              `json:"maxUploadBytes"`
+	PollIntervalSeconds    int                `json:"pollIntervalSeconds"`
+	StartOnBoot            bool               `json:"startOnBoot"`
+	MinimizeToTray         bool               `json:"minimizeToTray"`
+	EnableWaybarBridge     bool               `json:"enableWaybarBridge"`
+	DefaultOnRemoteDelete  RemoteDeletePolicy `json:"defaultOnRemoteDelete"`
+	SyncRootPath           string             `json:"syncRootPath,omitempty"`
+	AutoSyncAccountFolders bool               `json:"autoSyncAccountFolders"`
 }
 
 type BlockedFileEntry struct {
@@ -227,15 +229,32 @@ type RemoteFolderItem struct {
 	CanWrite   bool   `json:"canWrite"`
 }
 
+type DiscoveredRemoteFolder struct {
+	RemoteFolderID   string               `json:"remoteFolderId"`
+	RemoteFolderName string               `json:"remoteFolderName"`
+	Kind             FolderKind           `json:"kind"`
+	ShortCode        string               `json:"shortCode,omitempty"`
+	OwnerEmail       string               `json:"ownerEmail,omitempty"`
+	OwnerName        string               `json:"ownerName,omitempty"`
+	CanWrite         bool                 `json:"canWrite"`
+	DeviceNames      []string             `json:"deviceNames"`
+	Devices          []DeviceRegistration `json:"devices,omitempty"`
+	OnRemoteDelete   RemoteDeletePolicy   `json:"onRemoteDelete"`
+	OnLocalDelete    LocalDeletePolicy    `json:"onLocalDelete"`
+	Direction        SyncDirection        `json:"direction"`
+	SenderPolicy     *SenderPolicy        `json:"senderPolicy,omitempty"`
+}
+
 type DaemonSnapshot struct {
-	Account        AccountInfo                   `json:"account"`
-	Settings       AppSettings                   `json:"settings"`
-	Folders        []SyncFolderConfig            `json:"folders"`
-	Runtime        map[string]FolderRuntimeState `json:"runtime"`
-	Devices        []DeviceRegistration          `json:"devices"`
-	KnownSenders   []KnownSender                 `json:"knownSenders"`
-	BlockedFiles   []BlockedFileEntry            `json:"blockedFiles"`
-	RecentActivity []ActivityEvent               `json:"recentActivity"`
+	Account           AccountInfo                   `json:"account"`
+	Settings          AppSettings                   `json:"settings"`
+	Folders           []SyncFolderConfig            `json:"folders"`
+	Runtime           map[string]FolderRuntimeState `json:"runtime"`
+	Devices           []DeviceRegistration          `json:"devices"`
+	KnownSenders      []KnownSender                 `json:"knownSenders"`
+	BlockedFiles      []BlockedFileEntry            `json:"blockedFiles"`
+	RecentActivity    []ActivityEvent               `json:"recentActivity"`
+	DiscoveredFolders []DiscoveredRemoteFolder      `json:"discoveredFolders,omitempty"`
 }
 
 func NormalizeEmail(email string) string {

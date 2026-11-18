@@ -68,6 +68,15 @@ func (a *apiMockDrive) WriteControlJSON(context.Context, string, string, []byte)
 func (a *apiMockDrive) ListControlJSONs(context.Context, string) (map[string][]byte, error) {
 	return nil, nil
 }
+func (a *apiMockDrive) EnsureFolderKindMetadata(context.Context, string, config.FolderKind, string) error {
+	return nil
+}
+func (a *apiMockDrive) WriteFolderProfileJSON(context.Context, string, []byte) error {
+	return nil
+}
+func (a *apiMockDrive) DiscoverDriveSyncFolders(context.Context) ([]config.DiscoveredRemoteFolder, error) {
+	return nil, nil
+}
 
 func TestAPIAuthFoldersAndSettingsCap4GB(t *testing.T) {
 	tmp := t.TempDir()

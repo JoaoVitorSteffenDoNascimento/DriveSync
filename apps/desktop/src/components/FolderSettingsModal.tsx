@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { FolderOpen, Trash2, X } from 'lucide-react';
 import type {
   LocalDeletePolicy,
   RemoteDeletePolicy,
@@ -22,6 +22,7 @@ export const FolderSettingsModal: React.FC<Props> = ({
   onSaved,
 }) => {
   const [name, setName] = useState(folder.name);
+  const [localPath, setLocalPath] = useState(folder.localPath);
   const [direction, setDirection] = useState<SyncDirection>(folder.direction);
   const [onRemoteDelete, setOnRemoteDelete] = useState<RemoteDeletePolicy>(folder.onRemoteDelete);
   const [onLocalDelete, setOnLocalDelete] = useState<LocalDeletePolicy>(folder.onLocalDelete);
@@ -35,6 +36,7 @@ export const FolderSettingsModal: React.FC<Props> = ({
       await client.updateSyncFolder({
         ...folder,
         name: name.trim() || folder.name,
+        localPath: localPath.trim() || folder.localPath,
         direction,
         onRemoteDelete,
         onLocalDelete,
@@ -84,6 +86,25 @@ export const FolderSettingsModal: React.FC<Props> = ({
         <div className="form-group">
           <label className="form-label">Nome</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Pasta onde os arquivos serão armazenados neste PC</label>
+          <div className="row-inline">
+            <input className="input" value={localPath} onChange={(e) => setLocalPath(e.target.value)} />
+            {window.driveSyncDesktop && (
+              <button
+                type="button"
+                className="btn"
+                onClick={async () => {
+                  const chosen = await window.driveSyncDesktop?.selectLocalFolder();
+                  if (chosen) setLocalPath(chosen);
+                }}
+              >
+                <FolderOpen size={15} /> Alterar
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="form-group">

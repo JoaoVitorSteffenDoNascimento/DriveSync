@@ -142,6 +142,8 @@ export interface AppSettings {
   minimizeToTray: boolean;
   enableWaybarBridge: boolean;
   defaultOnRemoteDelete: RemoteDeletePolicy;
+  syncRootPath?: string;
+  autoSyncAccountFolders?: boolean;
 }
 
 export type BlockReason = 'exceeds_4gb' | 'sender_blocked' | 'ignore_pattern';
@@ -193,6 +195,22 @@ export interface RemoteFolderItem {
   canWrite: boolean;
 }
 
+export interface DiscoveredRemoteFolder {
+  remoteFolderId: string;
+  remoteFolderName: string;
+  kind: FolderKind;
+  shortCode?: string;
+  ownerEmail?: string;
+  ownerName?: string;
+  canWrite: boolean;
+  deviceNames: string[];
+  devices?: DeviceRegistration[];
+  onRemoteDelete: RemoteDeletePolicy;
+  onLocalDelete: LocalDeletePolicy;
+  direction: SyncDirection;
+  senderPolicy?: SenderPolicy;
+}
+
 export interface DaemonSnapshot {
   account: AccountInfo;
   settings: AppSettings;
@@ -202,6 +220,7 @@ export interface DaemonSnapshot {
   knownSenders: KnownSender[];
   blockedFiles: BlockedFileEntry[];
   recentActivity: ActivityEvent[];
+  discoveredFolders?: DiscoveredRemoteFolder[];
 }
 
 export interface CreateFolderInput {

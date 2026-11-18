@@ -38,6 +38,9 @@ class MobileSyncEngine(
             if (!account.connected) {
                 throw IllegalStateException("Conecte sua conta Google antes de sincronizar.")
             }
+            if (singleFolderId.isNullOrBlank()) {
+                runCatching { discoverAndCacheAccountFolders() }
+            }
             val folders = db.listFolders().filter {
                 !it.paused && (singleFolderId.isNullOrBlank() || it.id == singleFolderId)
             }
@@ -45,6 +48,96 @@ class MobileSyncEngine(
                 syncFolderInternal(folder, account)
             }
         }
+    }
+
+    fun discoverAndCacheAccountFolders(): List<DiscoveredRemoteFolder> {
+        val account = db.getAccountInfo()
+        if (!account.connected) return emptyList()
+        val settings = db.getSettings()
+        val existingFolders = db.listFolders()
+        val connectedRemoteIds = existingFolders.map { it.remoteFolderId }.toSet()
+
+        val all = api.discoverAccountFolders(settings.deviceId)
+        for (item in all) {
+            val targetFolderId = existingFolders.firstOrNull { it.remoteFolderId == item.remoteFolderId }?.id
+                ?: item.remoteFolderId
+            if (item.devices.isNotEmpty()) {
+                val mappedDevs = item.devices.map { d ->
+                    d.copy(
+                        folderId = targetFolderId,
+                        isCurrentDevice = d.deviceId == settings.deviceId
+                    )
+                }
+                db.replaceRemoteDevicesForFolder(targetFolderId, mappedDevs)
+            }
+        }
+
+        val pending = all.filter { !connectedRemoteIds.contains(it.remoteFolderId) }
+        db.saveDiscoveredFolders(pending)
+
+        if (pending.isNotEmpty() && settings.autoSyncAccountFolders && settings.syncRootUri.isNotBlank()) {
+            runCatching {
+                connectDiscoveredFolders(Uri.parse(settings.syncRootUri), pending, createSubfolders = true)
+            }
+        }
+        return db.getDiscoveredFolders().filter { item ->
+            db.listFolders().none { it.remoteFolderId == item.remoteFolderId }
+        }
+    }
+
+    fun connectDiscoveredFolders(
+        targetTreeUri: Uri,
+        targets: List<DiscoveredRemoteFolder>,
+        createSubfolders: Boolean = true
+    ): List<SyncFolderConfig> {
+        val rootDoc = DocumentFile.fromTreeUri(context, targetTreeUri)
+            ?: throw IllegalStateException("Sem permissão na pasta selecionada do celular.")
+        val settings = db.getSettings()
+        val existing = db.listFolders()
+        val connectedRemote = existing.map { it.remoteFolderId }.toMutableSet()
+        val created = mutableListOf<SyncFolderConfig>()
+
+        for (item in targets) {
+            if (item.remoteFolderId.isBlank() || connectedRemote.contains(item.remoteFolderId)) continue
+            val cleanName = item.remoteFolderName
+                .replace('/', '-')
+                .replace('\\', '-')
+                .trim()
+                .ifBlank { "Pasta-${item.remoteFolderId.take(6)}" }
+            val destDoc = if (createSubfolders) {
+                findOrCreateChildDir(rootDoc, cleanName)
+                    ?: throw IllegalStateException("Não foi possível criar subpasta $cleanName no celular.")
+            } else {
+                rootDoc
+            }
+            val policy = item.senderPolicy ?: SenderPolicy(
+                mode = if (item.kind == "master") "blocklist" else "all",
+                unknownSenderAction = "allow",
+                rules = emptyList()
+            )
+            val cfg = SyncFolderConfig(
+                id = "",
+                name = cleanName,
+                localPath = destDoc.uri.toString(),
+                remoteFolderId = item.remoteFolderId,
+                remoteFolderName = item.remoteFolderName,
+                kind = if (item.kind == "personal") "personal" else "master",
+                direction = if (item.canWrite) item.direction else "receive_only",
+                onRemoteDelete = item.onRemoteDelete.ifBlank { settings.defaultOnRemoteDelete },
+                onLocalDelete = item.onLocalDelete.ifBlank { "ignore" },
+                senderPolicy = policy,
+                paused = false,
+                shareCode = item.shortCode,
+                createdAt = DriveSyncConstants.nowIsoUtc()
+            )
+            val saved = db.upsertFolder(cfg)
+            created.add(saved)
+            connectedRemote.add(item.remoteFolderId)
+        }
+        db.saveDiscoveredFolders(
+            db.getDiscoveredFolders().filter { !connectedRemote.contains(it.remoteFolderId) }
+        )
+        return created
     }
 
     fun importDocumentUris(folderId: String, subpath: String, uris: List<Uri>): Pair<Int, List<String>> {
@@ -471,7 +564,7 @@ class MobileSyncEngine(
                 }
             }
 
-            // 4. Presença multi-dispositivo (.drivesync/devices)
+            // 4. Presença multi-dispositivo (.drivesync/devices) + perfil na nuvem
             runCatching {
                 val selfReg = DeviceRegistration(
                     deviceId = settings.deviceId,
@@ -487,11 +580,23 @@ class MobileSyncEngine(
                     isCurrentDevice = true
                 )
                 if (folder.direction == "bidirectional") {
+                    api.ensureFolderKindMetadata(folder.remoteFolderId, folder.kind, folder.name)
                     api.writeControlJson(
                         folder.remoteFolderId,
                         "${settings.deviceId}.json",
                         selfReg.toJson().toString(2)
                     )
+                    val profJson = DiscoveredRemoteFolder(
+                        remoteFolderId = folder.remoteFolderId,
+                        remoteFolderName = folder.name,
+                        kind = folder.kind,
+                        shortCode = folder.shareCode,
+                        onRemoteDelete = folder.onRemoteDelete,
+                        onLocalDelete = folder.onLocalDelete,
+                        direction = folder.direction,
+                        senderPolicy = folder.senderPolicy
+                    ).toJson().toString(2)
+                    api.writeFolderProfileJson(folder.remoteFolderId, profJson)
                 }
                 val remoteDevs = api.listControlJsons(folder.remoteFolderId, folder.id, settings.deviceId)
                     .ifEmpty { listOf(selfReg) }

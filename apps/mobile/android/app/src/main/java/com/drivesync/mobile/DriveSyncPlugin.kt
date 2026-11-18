@@ -221,6 +221,7 @@ class DriveSyncPlugin : Plugin() {
             db.saveAccountProfile(email, displayName)
             db.saveAuthSource("rclone_import")
             DriveSyncWorker.applySchedule(context, db.getSettings())
+            runCatching { engine.discoverAndCacheAccountFolders() }
         }
         return toJSObject(db.getAccountInfo().toJson())
     }
@@ -468,6 +469,7 @@ class DriveSyncPlugin : Plugin() {
         db.saveAccountProfile(email, displayName)
         db.saveAuthSource("oauth_pkce")
         DriveSyncWorker.applySchedule(context, db.getSettings())
+        runCatching { engine.discoverAndCacheAccountFolders() }
         return toJSObject(db.getAccountInfo().toJson())
     }
 
@@ -499,6 +501,15 @@ class DriveSyncPlugin : Plugin() {
 
     @PluginMethod
     fun pickLocalFolder(call: PluginCall) {
+        startTreePicker(call, "onLocalFolderPicked")
+    }
+
+    @PluginMethod
+    fun pickSyncRootFolder(call: PluginCall) {
+        startTreePicker(call, "onSyncRootPicked")
+    }
+
+    private fun startTreePicker(call: PluginCall, callbackName: String) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
             addFlags(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
@@ -507,23 +518,13 @@ class DriveSyncPlugin : Plugin() {
                     Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
             )
         }
-        startActivityForResult(call, intent, "onLocalFolderPicked")
+        startActivityForResult(call, intent, callbackName)
     }
 
-    @ActivityCallback
-    private fun onLocalFolderPicked(call: PluginCall?, result: ActivityResult) {
-        if (call == null) return
-        if (result.resultCode != Activity.RESULT_OK) {
-            call.reject("Seleção de pasta cancelada.")
-            return
-        }
-        val uri = result.data?.data
-        if (uri == null) {
-            call.reject("Nenhuma pasta retornada pelo Android.")
-            return
-        }
+    private fun persistTreeUri(data: Intent?): Pair<Uri, String> {
+        val uri = data?.data ?: throw IllegalStateException("Nenhuma pasta retornada pelo Android.")
         runCatching {
-            val takeFlags = (result.data?.flags ?: 0) and
+            val takeFlags = data.flags and
                 (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             val fallbackFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             context.contentResolver.takePersistableUriPermission(
@@ -533,10 +534,109 @@ class DriveSyncPlugin : Plugin() {
         }
         val doc = DocumentFile.fromTreeUri(context, uri)
         val label = doc?.name ?: uri.lastPathSegment ?: "Pasta do celular"
-        call.resolve(JSObject().apply {
-            put("uri", uri.toString())
-            put("displayName", label)
-        })
+        return uri to label
+    }
+
+    @ActivityCallback
+    private fun onLocalFolderPicked(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        if (result.resultCode != Activity.RESULT_OK) {
+            call.reject("Seleção de pasta cancelada.")
+            return
+        }
+        runCatching {
+            val (uri, label) = persistTreeUri(result.data)
+            JSObject().apply {
+                put("uri", uri.toString())
+                put("displayName", label)
+            }
+        }.onSuccess { call.resolve(it) }
+            .onFailure { call.reject(it.message ?: "Nenhuma pasta selecionada.") }
+    }
+
+    @ActivityCallback
+    private fun onSyncRootPicked(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        if (result.resultCode != Activity.RESULT_OK) {
+            call.reject("Seleção de pasta cancelada.")
+            return
+        }
+        val autoConnectAll = call.getBoolean("autoConnectDiscovered", false) ?: false
+        executor.execute {
+            runCatching {
+                val (uri, label) = persistTreeUri(result.data)
+                val cur = db.getSettings()
+                val updated = db.saveSettings(
+                    cur.copy(syncRootUri = uri.toString(), syncRootLabel = label)
+                )
+                var connectedCount = 0
+                if (autoConnectAll) {
+                    val discovered = engine.discoverAndCacheAccountFolders()
+                    if (discovered.isNotEmpty()) {
+                        val created = engine.connectDiscoveredFolders(uri, discovered, createSubfolders = true)
+                        connectedCount = created.size
+                        created.forEach { cfg ->
+                            executor.execute { runCatching { engine.syncAllFolders(cfg.id) } }
+                        }
+                    }
+                }
+                JSObject().apply {
+                    put("uri", updated.syncRootUri)
+                    put("displayName", updated.syncRootLabel)
+                    put("connectedCount", connectedCount)
+                }
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Erro ao configurar pasta base.") }
+        }
+    }
+
+    @PluginMethod
+    fun discoverAccountFolders(call: PluginCall) {
+        executor.execute {
+            runCatching {
+                val list = engine.discoverAndCacheAccountFolders()
+                val arr = JSONArray()
+                list.forEach { arr.put(it.toJson()) }
+                toJSObject(JSONObject().put("items", arr))
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Erro ao buscar pastas da conta no Drive.") }
+        }
+    }
+
+    @PluginMethod
+    fun syncDiscoveredFolders(call: PluginCall) {
+        val baseUriStr = call.getString("baseUri", "")?.trim().orEmpty()
+        val createSubfolders = call.getBoolean("createSubfolders", true) ?: true
+        val foldersArr = call.getArray("folders")
+        executor.execute {
+            runCatching {
+                val settings = db.getSettings()
+                val resolvedUri = baseUriStr.ifBlank { settings.syncRootUri }
+                require(resolvedUri.isNotBlank()) { "Escolha onde salvar as pastas no celular primeiro." }
+                val targets = mutableListOf<DiscoveredRemoteFolder>()
+                if (foldersArr != null) {
+                    for (i in 0 until foldersArr.length()) {
+                        val obj = foldersArr.optJSONObject(i) ?: continue
+                        val parsed = DiscoveredRemoteFolder.fromJson(obj)
+                        if (parsed.remoteFolderId.isNotBlank()) targets.add(parsed)
+                    }
+                } else {
+                    targets.addAll(db.getDiscoveredFolders())
+                }
+                val created = engine.connectDiscoveredFolders(
+                    Uri.parse(resolvedUri),
+                    targets,
+                    createSubfolders = createSubfolders
+                )
+                created.forEach { cfg ->
+                    executor.execute { runCatching { engine.syncAllFolders(cfg.id) } }
+                }
+                val arr = JSONArray()
+                created.forEach { arr.put(it.toJson()) }
+                toJSObject(JSONObject().put("folders", arr))
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Erro ao conectar pastas descobertas.") }
+        }
     }
 
     @PluginMethod
@@ -792,7 +892,7 @@ class DriveSyncPlugin : Plugin() {
                 val fullCode = DriveSyncConstants.formatFullCode(folder.remoteFolderId, shortCode)
                 db.upsertFolder(folder.copy(shareCode = fullCode))
                 runCatching {
-                    api.setFolderInviteMetadata(folder.remoteFolderId, folder.kind, shortCode)
+                    api.setFolderInviteMetadata(folder.remoteFolderId, folder.kind, shortCode, folder.name)
                 }
                 val out = JSONObject().apply {
                     put("folderId", folder.remoteFolderId)
@@ -851,7 +951,12 @@ class DriveSyncPlugin : Plugin() {
                 )
                 val saved = db.upsertFolder(cfg)
                 DriveSyncWorker.applySchedule(context, db.getSettings())
-                executor.execute { runCatching { engine.syncAllFolders(saved.id) } }
+                executor.execute {
+                    runCatching {
+                        api.ensureFolderKindMetadata(saved.remoteFolderId, saved.kind, saved.name)
+                    }
+                    runCatching { engine.syncAllFolders(saved.id) }
+                }
                 toJSObject(saved.toJson())
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Erro ao adicionar pasta.") }

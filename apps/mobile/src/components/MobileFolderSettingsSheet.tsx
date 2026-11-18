@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { FolderOpen, Trash2, X } from 'lucide-react';
 import type {
   LocalDeletePolicy,
   RemoteDeletePolicy,
@@ -22,6 +22,8 @@ export const MobileFolderSettingsSheet: React.FC<Props> = ({
   onSaved,
 }) => {
   const [name, setName] = useState(folder.name);
+  const [localPath, setLocalPath] = useState(folder.localPath);
+  const [localLabel, setLocalLabel] = useState('');
   const [direction, setDirection] = useState<SyncDirection>(folder.direction);
   const [onRemoteDelete, setOnRemoteDelete] = useState<RemoteDeletePolicy>(folder.onRemoteDelete);
   const [onLocalDelete, setOnLocalDelete] = useState<LocalDeletePolicy>(folder.onLocalDelete);
@@ -36,6 +38,7 @@ export const MobileFolderSettingsSheet: React.FC<Props> = ({
         folder: {
           ...folder,
           name: name.trim() || folder.name,
+          localPath,
           direction,
           onRemoteDelete,
           onLocalDelete,
@@ -82,6 +85,28 @@ export const MobileFolderSettingsSheet: React.FC<Props> = ({
         <div className="form-group">
           <label className="form-label">Nome</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Pasta no celular onde os arquivos ficam salvos</label>
+          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
+            {localLabel || localPath}
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={async () => {
+              try {
+                const picked = await bridge.pickLocalFolder();
+                setLocalPath(picked.uri);
+                setLocalLabel(picked.displayName);
+              } catch {
+                // usuário cancelou
+              }
+            }}
+          >
+            <FolderOpen size={14} /> Alterar onde salvar no celular
+          </button>
         </div>
 
         <div className="form-group">

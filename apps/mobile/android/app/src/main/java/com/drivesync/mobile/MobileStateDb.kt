@@ -21,6 +21,7 @@ class MobileStateDb(context: Context) :
         private const val KV_ACCOUNT_INFO = "account_info"
         private const val KV_AUTH_SOURCE = "auth_source"
         private const val KV_SETTINGS = "mobile_settings"
+        private const val KV_DISCOVERED_FOLDERS = "discovered_folders"
     }
 
     @Volatile
@@ -321,6 +322,30 @@ class MobileStateDb(context: Context) :
         deleteKv(KV_OAUTH_TOKEN)
         deleteKv(KV_ACCOUNT_INFO)
         deleteKv(KV_AUTH_SOURCE)
+        deleteKv(KV_DISCOVERED_FOLDERS)
+        writableDatabase.delete("devices", null, null)
+    }
+
+    @Synchronized
+    fun saveDiscoveredFolders(list: List<DiscoveredRemoteFolder>) {
+        val arr = JSONArray()
+        list.forEach { arr.put(it.toJson()) }
+        setKv(KV_DISCOVERED_FOLDERS, arr.toString())
+    }
+
+    @Synchronized
+    fun getDiscoveredFolders(): List<DiscoveredRemoteFolder> {
+        val raw = getKv(KV_DISCOVERED_FOLDERS) ?: return emptyList()
+        return runCatching {
+            val arr = JSONArray(raw)
+            val out = mutableListOf<DiscoveredRemoteFolder>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.optJSONObject(i) ?: continue
+                val item = DiscoveredRemoteFolder.fromJson(obj)
+                if (item.remoteFolderId.isNotBlank()) out.add(item)
+            }
+            out
+        }.getOrDefault(emptyList())
     }
 
     @Synchronized
@@ -384,6 +409,9 @@ class MobileStateDb(context: Context) :
             put("created_at", normalized.createdAt)
         }
         writableDatabase.insertWithOnConflict("sync_folders", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+        if (normalized.remoteFolderId.isNotBlank() && normalized.remoteFolderId != normalized.id) {
+            writableDatabase.delete("devices", "folder_id = ?", arrayOf(normalized.remoteFolderId))
+        }
         return normalized
     }
 
@@ -764,6 +792,14 @@ class MobileStateDb(context: Context) :
             }
         }
 
+        val connectedRemoteIds = folders.map { it.remoteFolderId }.toSet()
+        val discoveredArr = JSONArray()
+        for (item in getDiscoveredFolders()) {
+            if (!connectedRemoteIds.contains(item.remoteFolderId)) {
+                discoveredArr.put(item.toJson())
+            }
+        }
+
         return JSONObject().apply {
             put("account", account.toJson())
             put("settings", settings.toJson())
@@ -773,6 +809,7 @@ class MobileStateDb(context: Context) :
             put("knownSenders", sendersArr)
             put("blockedFiles", blockedArr)
             put("recentActivity", activityArr)
+            put("discoveredFolders", discoveredArr)
         }
     }
 }

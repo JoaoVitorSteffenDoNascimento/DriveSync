@@ -86,6 +86,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/auth/oauth/cancel", s.withAuth(s.handleOAuthCancel))
 	mux.HandleFunc("/api/auth/import-rclone", s.withAuth(s.handleImportRclone))
 	mux.HandleFunc("/api/auth/disconnect", s.withAuth(s.handleDisconnect))
+	mux.HandleFunc("/api/account/folders", s.withAuth(s.handleAccountDiscoveredFolders))
+	mux.HandleFunc("/api/account/sync-discovered", s.withAuth(s.handleSyncDiscoveredFolders))
 	mux.HandleFunc("/api/drive/folders", s.withAuth(s.handleDriveFolders))
 	mux.HandleFunc("/api/drive/resolve-code", s.withAuth(s.handleResolveCode))
 	mux.HandleFunc("/api/folders", s.withAuth(s.handleFolders))
@@ -569,10 +571,13 @@ func (s *Server) handleFolders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.reloadWatcher()
-		go func(id string) {
-			_ = s.syncer.SyncFolder(context.Background(), id)
+		go func(f config.SyncFolderConfig) {
+			if cli, cliErr := s.currentDriveClient(context.Background()); cliErr == nil {
+				_ = cli.EnsureFolderKindMetadata(context.Background(), f.RemoteFolderID, f.Kind, f.Name)
+			}
+			_ = s.syncer.SyncFolder(context.Background(), f.ID)
 			s.Broadcast("snapshot_dirty", map[string]bool{"dirty": true})
-		}(cfg.ID)
+		}(cfg)
 		writeJSON(w, http.StatusCreated, cfg)
 
 	default:
@@ -959,6 +964,150 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeErr(w, http.StatusMethodNotAllowed, "método não permitido")
 	}
+}
+
+func (s *Server) handleAccountDiscoveredFolders(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeErr(w, http.StatusMethodNotAllowed, "método não permitido")
+		return
+	}
+	cli, err := s.currentDriveClient(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	all, err := cli.DiscoverDriveSyncFolders(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, "erro ao buscar pastas da conta no Drive: "+err.Error())
+		return
+	}
+	localFolders, _ := s.store.ListFolders()
+	connectedRemote := make(map[string]struct{}, len(localFolders))
+	for _, lf := range localFolders {
+		connectedRemote[lf.RemoteFolderID] = struct{}{}
+	}
+	settings, _ := s.store.GetSettings()
+	filtered := make([]config.DiscoveredRemoteFolder, 0)
+	for _, item := range all {
+		for _, dev := range item.Devices {
+			devCopy := dev
+			devCopy.FolderID = item.RemoteFolderID
+			devCopy.IsCurrentDevice = dev.DeviceID == settings.DeviceID
+			_ = s.store.UpsertDevice(devCopy)
+		}
+		if _, exists := connectedRemote[item.RemoteFolderID]; !exists {
+			filtered = append(filtered, item)
+		}
+	}
+	s.Broadcast("snapshot_dirty", map[string]bool{"dirty": true})
+	writeJSON(w, http.StatusOK, filtered)
+}
+
+func (s *Server) handleSyncDiscoveredFolders(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, http.StatusMethodNotAllowed, "método não permitido")
+		return
+	}
+	var body struct {
+		BasePath string                          `json:"basePath"`
+		Folders  []config.DiscoveredRemoteFolder `json:"folders"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "JSON inválido")
+		return
+	}
+	settings, _ := s.store.GetSettings()
+	basePath := strings.TrimSpace(body.BasePath)
+	if basePath == "" {
+		basePath = strings.TrimSpace(settings.SyncRootPath)
+	}
+	if basePath == "" {
+		writeErr(w, http.StatusBadRequest, "escolha a pasta base onde os arquivos serão salvos neste PC")
+		return
+	}
+	if body.BasePath != "" && body.BasePath != settings.SyncRootPath {
+		settings.SyncRootPath = basePath
+		_ = s.store.SaveSettings(settings)
+	}
+
+	existingFolders, _ := s.store.ListFolders()
+	connectedRemote := make(map[string]struct{}, len(existingFolders))
+	for _, f := range existingFolders {
+		connectedRemote[f.RemoteFolderID] = struct{}{}
+	}
+
+	createdList := make([]config.SyncFolderConfig, 0, len(body.Folders))
+	for _, item := range body.Folders {
+		if item.RemoteFolderID == "" {
+			continue
+		}
+		if _, exists := connectedRemote[item.RemoteFolderID]; exists {
+			continue
+		}
+		cleanName := strings.NewReplacer("/", "-", "\\", "-", "..", "").Replace(strings.TrimSpace(item.RemoteFolderName))
+		if cleanName == "" {
+			cleanName = "DriveSync-" + item.RemoteFolderID[:min(6, len(item.RemoteFolderID))]
+		}
+		targetLocal := filepath.Join(basePath, cleanName)
+		if err := os.MkdirAll(targetLocal, 0o755); err != nil {
+			writeErr(w, http.StatusBadRequest, "não foi possível criar pasta local: "+err.Error())
+			return
+		}
+		kind := item.Kind
+		if kind == "" {
+			kind = config.FolderKindMaster
+		}
+		dir := item.Direction
+		if dir == "" {
+			dir = config.DirectionBidirectional
+		}
+		onRem := item.OnRemoteDelete
+		if onRem == "" {
+			onRem = settings.DefaultOnRemoteDelete
+		}
+		onLoc := item.OnLocalDelete
+		if onLoc == "" {
+			onLoc = config.LocalDeleteIgnore
+		}
+		policy := config.SenderPolicy{
+			Mode:                config.SenderModeAll,
+			UnknownSenderAction: "allow",
+			Rules:               []config.SenderRule{},
+		}
+		if item.SenderPolicy != nil {
+			policy = *item.SenderPolicy
+		} else if kind == config.FolderKindMaster {
+			policy.Mode = config.SenderModeBlocklist
+		}
+		cfg := config.SyncFolderConfig{
+			ID:               config.NewID(),
+			Name:             cleanName,
+			LocalPath:        targetLocal,
+			RemoteFolderID:   item.RemoteFolderID,
+			RemoteFolderName: item.RemoteFolderName,
+			Kind:             kind,
+			Direction:        dir,
+			OnRemoteDelete:   onRem,
+			OnLocalDelete:    onLoc,
+			SenderPolicy:     policy,
+			ShareCode:        item.ShortCode,
+		}
+		if err := s.store.UpsertFolder(cfg); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		createdList = append(createdList, cfg)
+		connectedRemote[item.RemoteFolderID] = struct{}{}
+	}
+	s.reloadWatcher()
+	for _, cfg := range createdList {
+		go func(id string) {
+			_ = s.syncer.SyncFolder(context.Background(), id)
+			s.Broadcast("snapshot_dirty", map[string]bool{"dirty": true})
+		}(cfg.ID)
+	}
+	s.Broadcast("snapshot_dirty", map[string]bool{"dirty": true})
+	writeJSON(w, http.StatusCreated, createdList)
 }
 
 func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {

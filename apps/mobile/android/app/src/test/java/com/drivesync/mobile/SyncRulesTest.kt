@@ -93,11 +93,19 @@ class SyncRulesTest {
         assertEquals("gdrive", autoDetected.remoteName)
 
         val settings = MobileSettings.fromJson(
-            JSONObject("""{"pollIntervalSeconds":15,"startOnBoot":true}"""),
+            JSONObject("""{"pollIntervalSeconds":15,"startOnBoot":true,"syncRootUri":"content://tree/1","syncRootLabel":"DriveSync","autoSyncAccountFolders":true}"""),
             "dev-1",
             "Celular"
         )
         assertEquals(15, settings.pollIntervalSeconds)
         assertTrue(settings.startOnBoot)
+        assertEquals("DriveSync", settings.syncRootLabel)
+        assertTrue(settings.autoSyncAccountFolders)
+
+        val discovered = DiscoveredRemoteFolder.fromJson(
+            JSONObject("""{"remoteFolderId":"r1","remoteFolderName":"Master","kind":"master","deviceNames":["Notebook Arch"]}""")
+        )
+        assertEquals("r1", discovered.remoteFolderId)
+        assertEquals("Notebook Arch", discovered.deviceNames.first())
     }
 }

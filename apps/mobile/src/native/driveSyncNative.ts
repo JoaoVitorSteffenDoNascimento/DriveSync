@@ -5,6 +5,7 @@ import {
   type AppSettings,
   type CreateFolderInput,
   type DaemonSnapshot,
+  type DiscoveredRemoteFolder,
   type FolderContentsResponse,
   type FolderInviteInfo,
   type ImportPathsResult,
@@ -17,6 +18,8 @@ import {
 export interface MobileSettings extends AppSettings {
   wifiOnly: boolean;
   backgroundSyncEnabled: boolean;
+  syncRootUri?: string;
+  syncRootLabel?: string;
 }
 
 export interface MobileSnapshot extends Omit<DaemonSnapshot, 'settings'> {
@@ -26,6 +29,7 @@ export interface MobileSnapshot extends Omit<DaemonSnapshot, 'settings'> {
 export interface PickedMobileFolder {
   uri: string;
   displayName: string;
+  connectedCount?: number;
 }
 
 export interface OAuthClientStatus {
@@ -49,6 +53,13 @@ export interface DriveSyncNativePlugin {
   cancelGoogleOAuth(): Promise<{ ok: boolean }>;
   disconnectAccount(): Promise<{ ok: boolean }>;
   pickLocalFolder(): Promise<PickedMobileFolder>;
+  pickSyncRootFolder(options?: { autoConnectDiscovered?: boolean }): Promise<PickedMobileFolder>;
+  discoverAccountFolders(): Promise<{ items: DiscoveredRemoteFolder[] }>;
+  syncDiscoveredFolders(options: {
+    baseUri?: string;
+    createSubfolders?: boolean;
+    folders?: DiscoveredRemoteFolder[];
+  }): Promise<{ folders: SyncFolderConfig[] }>;
   pickAndImportFiles(options: { folderId: string; subpath?: string }): Promise<ImportPathsResult>;
   pickAndImportFolder(options: { folderId: string; subpath?: string }): Promise<ImportPathsResult>;
   openLocalItem(options: { folderId?: string; relativePath?: string; uri?: string }): Promise<{ ok: boolean }>;
@@ -188,6 +199,34 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       },
       async pickLocalFolder() {
         return { uri: 'content://com.android.externalstorage.documents/tree/primary%3ADriveSync', displayName: 'Armazenamento/DriveSync' };
+      },
+      async pickSyncRootFolder() {
+        const uri = 'content://com.android.externalstorage.documents/tree/primary%3ADriveSync';
+        previewState.settings.syncRootUri = uri;
+        previewState.settings.syncRootLabel = 'DriveSync';
+        return { uri, displayName: 'DriveSync', connectedCount: 0 };
+      },
+      async discoverAccountFolders() {
+        return { items: previewState.discoveredFolders ?? [] };
+      },
+      async syncDiscoveredFolders({ folders = [] }) {
+        return {
+          folders: folders.map((d, idx) => ({
+            id: `disc-${idx}`,
+            name: d.remoteFolderName,
+            localPath: 'content://mock/DriveSync/' + d.remoteFolderName,
+            remoteFolderId: d.remoteFolderId,
+            remoteFolderName: d.remoteFolderName,
+            kind: d.kind,
+            direction: d.direction,
+            onRemoteDelete: d.onRemoteDelete,
+            onLocalDelete: d.onLocalDelete,
+            senderPolicy: d.senderPolicy ?? { mode: 'blocklist', unknownSenderAction: 'allow', rules: [] },
+            paused: false,
+            shareCode: d.shortCode,
+            createdAt: new Date().toISOString(),
+          })),
+        };
       },
       async pickAndImportFiles() {
         return { addedCount: 0, skippedOver4GB: [], errors: [] };

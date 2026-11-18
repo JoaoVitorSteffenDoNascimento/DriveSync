@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -271,6 +272,17 @@ func (c *GoogleDriveClient) GetFolderMeta(ctx context.Context, folderID string) 
 		return FolderMeta{}, errors.New("o código ou link informado não aponta para uma pasta do Google Drive")
 	}
 	return driveFileToFolderMeta(f), nil
+}
+
+func (c *GoogleDriveClient) EnsureFolderKindMetadata(ctx context.Context, folderID string, kind config.FolderKind, folderName string) error {
+	u := fmt.Sprintf("%s/files/%s?supportsAllDrives=true", c.apiBaseURL, url.PathEscape(folderID))
+	props := map[string]string{
+		"ds_folder_kind": string(kind),
+	}
+	if len(folderName) <= 100 && folderName != "" {
+		props["ds_folder_name"] = folderName
+	}
+	return c.doJSON(ctx, http.MethodPatch, u, map[string]any{"properties": props}, nil)
 }
 
 func (c *GoogleDriveClient) SetFolderInviteMetadata(ctx context.Context, folderID string, shortCode string, kind config.FolderKind, folderName string) error {
@@ -811,10 +823,21 @@ func (c *GoogleDriveClient) WriteControlJSON(ctx context.Context, rootFolderID s
 	if err != nil {
 		return err
 	}
+	return c.upsertJSONInParent(ctx, devicesFolderID, fileName, payload)
+}
 
+func (c *GoogleDriveClient) WriteFolderProfileJSON(ctx context.Context, rootFolderID string, payload []byte) error {
+	ctrlFolderID, err := c.EnsurePath(ctx, rootFolderID, config.ControlDirName)
+	if err != nil {
+		return err
+	}
+	return c.upsertJSONInParent(ctx, ctrlFolderID, "folder-config.json", payload)
+}
+
+func (c *GoogleDriveClient) upsertJSONInParent(ctx context.Context, parentID string, fileName string, payload []byte) error {
 	params := url.Values{}
 	params.Set("q", fmt.Sprintf("'%s' in parents and name = '%s' and trashed = false",
-		escapeQueryLiteral(devicesFolderID), escapeQueryLiteral(fileName)))
+		escapeQueryLiteral(parentID), escapeQueryLiteral(fileName)))
 	params.Set("pageSize", "1")
 	params.Set("supportsAllDrives", "true")
 	params.Set("includeItemsFromAllDrives", "true")
@@ -827,7 +850,7 @@ func (c *GoogleDriveClient) WriteControlJSON(ctx context.Context, rootFolderID s
 		return err
 	}
 
-	tmp, err := os.CreateTemp("", "ds-presence-*.json")
+	tmp, err := os.CreateTemp("", "ds-ctrl-*.json")
 	if err != nil {
 		return err
 	}
@@ -843,8 +866,29 @@ func (c *GoogleDriveClient) WriteControlJSON(ctx context.Context, rootFolderID s
 	if len(listResp.Files) > 0 {
 		existingID = listResp.Files[0].ID
 	}
-	_, err = c.UploadFile(ctx, tmpPath, fileName, devicesFolderID, existingID, "", "", "", config.MaxUploadBytes, nil)
+	_, err = c.UploadFile(ctx, tmpPath, fileName, parentID, existingID, "", "", "", config.MaxUploadBytes, nil)
 	return err
+}
+
+func (c *GoogleDriveClient) downloadSmallControlFile(ctx context.Context, fileID string) ([]byte, bool) {
+	u := fmt.Sprintf("%s/files/%s?alt=media&supportsAllDrives=true", c.apiBaseURL, url.PathEscape(fileID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, false
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, false
+	}
+	b, readErr := io.ReadAll(io.LimitReader(resp.Body, 128*1024))
+	if readErr != nil {
+		return nil, false
+	}
+	return b, true
 }
 
 func (c *GoogleDriveClient) ListControlJSONs(ctx context.Context, rootFolderID string) (map[string][]byte, error) {
@@ -865,23 +909,126 @@ func (c *GoogleDriveClient) ListControlJSONs(ctx context.Context, rootFolderID s
 		if !strings.HasSuffix(ch.Name, ".json") {
 			continue
 		}
-		u := fmt.Sprintf("%s/files/%s?alt=media&supportsAllDrives=true", c.apiBaseURL, url.PathEscape(ch.ID))
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-		if err != nil {
+		if b, ok := c.downloadSmallControlFile(ctx, ch.ID); ok {
+			out[ch.Name] = b
+		}
+	}
+	return out, nil
+}
+
+func (c *GoogleDriveClient) DiscoverDriveSyncFolders(ctx context.Context) ([]config.DiscoveredRemoteFolder, error) {
+	queries := []string{
+		fmt.Sprintf("name = '%s' and mimeType = '%s' and trashed = false", escapeQueryLiteral(config.ControlDirName), folderMimeType),
+		fmt.Sprintf("mimeType = '%s' and trashed = false and properties has { key='ds_folder_kind' and value='master' }", folderMimeType),
+		fmt.Sprintf("mimeType = '%s' and trashed = false and properties has { key='ds_folder_kind' and value='personal' }", folderMimeType),
+	}
+
+	rootIDs := make(map[string]struct{})
+	for i, q := range queries {
+		params := url.Values{}
+		params.Set("q", q)
+		params.Set("pageSize", "100")
+		params.Set("supportsAllDrives", "true")
+		params.Set("includeItemsFromAllDrives", "true")
+		params.Set("fields", "files(id,parents)")
+		var resp struct {
+			Files []driveFile `json:"files"`
+		}
+		if err := c.doJSON(ctx, http.MethodGet, c.apiBaseURL+"/files?"+params.Encode(), nil, &resp); err != nil {
 			continue
 		}
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			continue
-		}
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			b, readErr := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-			if readErr == nil {
-				out[ch.Name] = b
+		for _, f := range resp.Files {
+			if i == 0 {
+				for _, p := range f.Parents {
+					if p != "" {
+						rootIDs[p] = struct{}{}
+					}
+				}
+			} else if f.ID != "" {
+				rootIDs[f.ID] = struct{}{}
 			}
 		}
-		_ = resp.Body.Close()
 	}
+
+	out := make([]config.DiscoveredRemoteFolder, 0, len(rootIDs))
+	for rootID := range rootIDs {
+		meta, err := c.GetFolderMeta(ctx, rootID)
+		if err != nil {
+			continue
+		}
+		item := config.DiscoveredRemoteFolder{
+			RemoteFolderID:   meta.ID,
+			RemoteFolderName: meta.Name,
+			Kind:             meta.Kind,
+			ShortCode:        meta.JoinCode,
+			OwnerEmail:       meta.OwnerEmail,
+			OwnerName:        meta.OwnerName,
+			CanWrite:         meta.CanWrite,
+			OnRemoteDelete:   config.RemoteDeleteKeepLocal,
+			OnLocalDelete:    config.LocalDeleteIgnore,
+			Direction:        config.DirectionBidirectional,
+		}
+		if !meta.CanWrite {
+			item.Direction = config.DirectionReceiveOnly
+		}
+
+		if ctrlID, ok, _ := c.findChildFolder(ctx, rootID, config.ControlDirName); ok {
+			if children, listErr := c.listChildren(ctx, ctrlID); listErr == nil {
+				for _, ch := range children {
+					if ch.Name == "folder-config.json" {
+						if b, ok := c.downloadSmallControlFile(ctx, ch.ID); ok {
+							var prof config.DiscoveredRemoteFolder
+							if json.Unmarshal(b, &prof) == nil {
+								if prof.Kind != "" {
+									item.Kind = prof.Kind
+								}
+								if prof.RemoteFolderName != "" {
+									item.RemoteFolderName = prof.RemoteFolderName
+								}
+								if prof.ShortCode != "" && item.ShortCode == "" {
+									item.ShortCode = prof.ShortCode
+								}
+								if prof.OnRemoteDelete != "" {
+									item.OnRemoteDelete = prof.OnRemoteDelete
+								}
+								if prof.OnLocalDelete != "" {
+									item.OnLocalDelete = prof.OnLocalDelete
+								}
+								if prof.SenderPolicy != nil {
+									item.SenderPolicy = prof.SenderPolicy
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if rawDevs, _ := c.ListControlJSONs(ctx, rootID); len(rawDevs) > 0 {
+			seenNames := make(map[string]struct{})
+			for _, b := range rawDevs {
+				var dev config.DeviceRegistration
+				if json.Unmarshal(b, &dev) == nil && dev.DeviceID != "" {
+					item.Devices = append(item.Devices, dev)
+					if dev.DeviceName != "" {
+						seenNames[dev.DeviceName] = struct{}{}
+					}
+				}
+			}
+			for name := range seenNames {
+				item.DeviceNames = append(item.DeviceNames, name)
+			}
+			sort.Strings(item.DeviceNames)
+		}
+		if item.DeviceNames == nil {
+			item.DeviceNames = []string{}
+		}
+		out = append(out, item)
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		return strings.ToLower(out[i].RemoteFolderName) < strings.ToLower(out[j].RemoteFolderName)
+	})
 	return out, nil
 }
 

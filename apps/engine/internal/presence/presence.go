@@ -55,6 +55,10 @@ func (m *Manager) SyncFolderDevices(ctx context.Context, folder config.SyncFolde
 	// Sempre grava localmente primeiro (mesmo se a pasta Drive for somente leitura)
 	_ = m.store.UpsertDevice(selfDev)
 
+	if !folder.Paused {
+		_ = m.drive.EnsureFolderKindMetadata(ctx, folder.RemoteFolderID, folder.Kind, folder.Name)
+	}
+
 	payload, err := json.MarshalIndent(selfDev, "", "  ")
 	if err == nil {
 		writeErr := m.drive.WriteControlJSON(ctx, folder.RemoteFolderID, settings.DeviceID+".json", payload)
@@ -62,6 +66,20 @@ func (m *Manager) SyncFolderDevices(ctx context.Context, folder config.SyncFolde
 			// Ignora sem falhar o sync se não tiver permissão de escrita na pasta Master
 			_ = writeErr
 		}
+	}
+
+	profile := config.DiscoveredRemoteFolder{
+		RemoteFolderID:   folder.RemoteFolderID,
+		RemoteFolderName: folder.Name,
+		Kind:             folder.Kind,
+		ShortCode:        folder.ShareCode,
+		OnRemoteDelete:   folder.OnRemoteDelete,
+		OnLocalDelete:    folder.OnLocalDelete,
+		Direction:        folder.Direction,
+		SenderPolicy:     &folder.SenderPolicy,
+	}
+	if profPayload, profErr := json.MarshalIndent(profile, "", "  "); profErr == nil {
+		_ = m.drive.WriteFolderProfileJSON(ctx, folder.RemoteFolderID, profPayload)
 	}
 
 	remoteFiles, err := m.drive.ListControlJSONs(ctx, folder.RemoteFolderID)

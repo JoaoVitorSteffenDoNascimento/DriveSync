@@ -175,4 +175,12 @@ func TestFolderInviteAndJoinCodeDiscovery(t *testing.T) {
 	if createdPerm["emailAddress"] != "joao@gmail.com" || createdPerm["role"] != "reader" {
 		t.Fatalf("permissão inesperada: %+v", createdPerm)
 	}
+
+	discovered, err := cli.DiscoverDriveSyncFolders(context.Background())
+	if err != nil {
+		t.Fatalf("DiscoverDriveSyncFolders erro: %v", err)
+	}
+	if len(discovered) == 0 || discovered[0].RemoteFolderID != "folder-123" {
+		t.Fatalf("esperava descobrir folder-123 pela propriedade ds_folder_kind, obtido %+v", discovered)
+	}
 }

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Check,
   CheckCircle2,
+  CloudDownload,
   Copy,
   Crown,
   ExternalLink,
@@ -33,6 +34,7 @@ import {
 import {
   formatBytes,
   normalizeEmail,
+  type DiscoveredRemoteFolder,
   type FolderRuntimeState,
   type RemoteDeletePolicy,
   type SenderPolicyMode,
@@ -120,6 +122,8 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
   const [shareFolder, setShareFolder] = useState<SyncFolderConfig | null>(null);
   const [browserFolder, setBrowserFolder] = useState<SyncFolderConfig | null>(null);
   const [settingsFolder, setSettingsFolder] = useState<SyncFolderConfig | null>(null);
+  const [loadingDiscovered, setLoadingDiscovered] = useState(false);
+  const [syncingDiscovered, setSyncingDiscovered] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -135,9 +139,27 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
     }
   }, [bridge]);
 
+  const handleDiscoverFromCloud = useCallback(async () => {
+    setLoadingDiscovered(true);
+    try {
+      await bridge.discoverAccountFolders();
+      await refresh();
+    } catch {
+      // ignora silenciosamente se offline
+    } finally {
+      setLoadingDiscovered(false);
+    }
+  }, [bridge, refresh]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (snap?.account.connected) {
+      void handleDiscoverFromCloud();
+    }
+  }, [snap?.account.connected, handleDiscoverFromCloud]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -190,6 +212,7 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
   }
 
   const blocked4gb = snap.blockedFiles.filter((b) => b.reason === 'exceeds_4gb');
+  const discovered = snap.discoveredFolders ?? [];
 
   const handleSyncAll = async () => {
     setError(null);
@@ -199,6 +222,53 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
     }
     setNotice('Sincronização iniciada para todas as pastas ativas.');
     await refresh();
+  };
+
+  const handleConnectAllDiscovered = async (forcePickRoot: boolean) => {
+    if (discovered.length === 0) return;
+    setSyncingDiscovered(true);
+    setError(null);
+    try {
+      if (forcePickRoot || !snap.settings.syncRootUri) {
+        const picked = await bridge.pickSyncRootFolder({ autoConnectDiscovered: true });
+        setNotice(
+          `${picked.connectedCount ?? discovered.length} pasta(s) salva(s) em "${picked.displayName}" e sincronizando!`,
+        );
+      } else {
+        const res = await bridge.syncDiscoveredFolders({
+          baseUri: snap.settings.syncRootUri,
+          createSubfolders: true,
+          folders: discovered,
+        });
+        setNotice(
+          `${res.folders.length} pasta(s) sincronizando em "${snap.settings.syncRootLabel || 'pasta base'}"!`,
+        );
+      }
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncingDiscovered(false);
+    }
+  };
+
+  const handleConnectSingleDiscovered = async (item: DiscoveredRemoteFolder) => {
+    setSyncingDiscovered(true);
+    setError(null);
+    try {
+      const picked = await bridge.pickLocalFolder();
+      await bridge.syncDiscoveredFolders({
+        baseUri: picked.uri,
+        createSubfolders: false,
+        folders: [item],
+      });
+      setNotice(`Pasta "${item.remoteFolderName}" conectada em "${picked.displayName}"!`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncingDiscovered(false);
+    }
   };
 
   return (
@@ -233,6 +303,16 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
             <div className="row-between" style={{ marginBottom: 4 }}>
               <h1 style={{ margin: 0, fontSize: 19 }}>Suas Pastas Conectadas</h1>
               <div className="row-gap">
+                {snap.account.connected && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={loadingDiscovered}
+                    onClick={() => void handleDiscoverFromCloud()}
+                  >
+                    <CloudDownload size={14} /> {loadingDiscovered ? 'Buscando...' : 'Buscar da nuvem'}
+                  </button>
+                )}
                 {snap.account.connected && snap.folders.length > 0 && (
                   <button
                     type="button"
@@ -289,6 +369,72 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                 >
                   Ver detalhes
                 </button>
+              </div>
+            )}
+
+            {snap.account.connected && discovered.length > 0 && (
+              <div className="card" style={{ borderColor: 'var(--primary)' }}>
+                <div className="row-between" style={{ marginBottom: 8 }}>
+                  <div>
+                    <div className="row-gap">
+                      <CloudDownload size={17} color="var(--primary)" />
+                      <strong>Pastas encontradas na sua conta Google ({discovered.length})</strong>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+                      Escolha onde armazenar no celular para espelhar com seu PC e outros dispositivos.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="row-gap" style={{ marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={syncingDiscovered}
+                    onClick={() => void handleConnectAllDiscovered(false)}
+                  >
+                    <FolderOpen size={14} />{' '}
+                    {snap.settings.syncRootUri
+                      ? `Sincronizar todas em "${snap.settings.syncRootLabel || 'Pasta base'}"`
+                      : 'Escolher onde salvar e conectar todas'}
+                  </button>
+                  {snap.settings.syncRootUri && (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={syncingDiscovered}
+                      onClick={() => void handleConnectAllDiscovered(true)}
+                    >
+                      Alterar pasta base
+                    </button>
+                  )}
+                </div>
+
+                {discovered.map((d) => (
+                  <div key={d.remoteFolderId} className="list-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="row-gap">
+                        <strong>{d.remoteFolderName}</strong>
+                        <span className="badge">{d.kind === 'master' ? 'Drive Master' : 'Pessoal'}</span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                        {d.deviceNames.length > 0
+                          ? `Conectada em: ${d.deviceNames.join(', ')}`
+                          : d.ownerEmail
+                            ? `Dono: ${d.ownerEmail}`
+                            : 'Disponível na conta Google'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={syncingDiscovered}
+                      onClick={() => void handleConnectSingleDiscovered(d)}
+                    >
+                      <FolderOpen size={14} /> Escolher onde salvar
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1055,6 +1201,47 @@ const MobileSettingsTab: React.FC<{
             value={form.deviceName}
             onChange={(e) => setForm({ ...form, deviceName: e.target.value })}
           />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            Pasta base onde novas pastas sincronizadas da sua conta serão salvas no celular
+          </label>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
+            {form.syncRootLabel || form.syncRootUri || 'Nenhuma pasta base selecionada ainda'}
+          </div>
+          <div className="row-gap" style={{ marginTop: 4 }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={async () => {
+                try {
+                  const picked = await bridge.pickSyncRootFolder({ autoConnectDiscovered: false });
+                  setForm((prev) => ({
+                    ...prev,
+                    syncRootUri: picked.uri,
+                    syncRootLabel: picked.displayName,
+                  }));
+                  await onRefresh();
+                } catch {
+                  // cancelado
+                }
+              }}
+            >
+              <FolderOpen size={14} /> Escolher onde salvar arquivos
+            </button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="row-gap">
+            <input
+              type="checkbox"
+              checked={form.autoSyncAccountFolders ?? true}
+              onChange={(e) => setForm({ ...form, autoSyncAccountFolders: e.target.checked })}
+            />
+            <span>Conectar automaticamente novas pastas da mesma conta Google nessa pasta base</span>
+          </label>
         </div>
 
         <div className="form-group">

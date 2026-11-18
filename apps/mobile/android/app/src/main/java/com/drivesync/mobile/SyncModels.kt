@@ -15,6 +15,9 @@ object DriveSyncConstants {
     const val QUARANTINE_DIR = ".DriveSync-Quarentena"
     const val JOIN_CODE_APP_PROP = "drivesyncJoinCode"
     const val FOLDER_KIND_APP_PROP = "drivesyncKind"
+    const val DS_JOIN_CODE_PROP = "ds_join_code"
+    const val DS_FOLDER_KIND_PROP = "ds_folder_kind"
+    const val DS_FOLDER_NAME_PROP = "ds_folder_name"
     const val GOOGLE_OAUTH_SCOPE =
         "https://www.googleapis.com/auth/drive openid email profile"
     private const val CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -95,7 +98,10 @@ data class MobileSettings(
     val enableWaybarBridge: Boolean = false,
     val defaultOnRemoteDelete: String = "keep_local",
     val wifiOnly: Boolean = true,
-    val backgroundSyncEnabled: Boolean = true
+    val backgroundSyncEnabled: Boolean = true,
+    val syncRootUri: String = "",
+    val syncRootLabel: String = "",
+    val autoSyncAccountFolders: Boolean = true
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("deviceId", deviceId)
@@ -108,6 +114,9 @@ data class MobileSettings(
         put("defaultOnRemoteDelete", if (defaultOnRemoteDelete == "mirror_trash") "mirror_trash" else "keep_local")
         put("wifiOnly", wifiOnly)
         put("backgroundSyncEnabled", backgroundSyncEnabled)
+        if (syncRootUri.isNotBlank()) put("syncRootUri", syncRootUri)
+        if (syncRootLabel.isNotBlank()) put("syncRootLabel", syncRootLabel)
+        put("autoSyncAccountFolders", autoSyncAccountFolders)
     }
 
     companion object {
@@ -122,7 +131,10 @@ data class MobileSettings(
                 enableWaybarBridge = false,
                 defaultOnRemoteDelete = if (obj.optString("defaultOnRemoteDelete") == "mirror_trash") "mirror_trash" else "keep_local",
                 wifiOnly = obj.optBoolean("wifiOnly", true),
-                backgroundSyncEnabled = obj.optBoolean("backgroundSyncEnabled", true)
+                backgroundSyncEnabled = obj.optBoolean("backgroundSyncEnabled", true),
+                syncRootUri = obj.optString("syncRootUri", "").trim(),
+                syncRootLabel = obj.optString("syncRootLabel", "").trim(),
+                autoSyncAccountFolders = obj.optBoolean("autoSyncAccountFolders", true)
             )
         }
     }
@@ -374,6 +386,63 @@ data class RemoteFolderItem(
         if (ownerEmail.isNotBlank()) put("ownerEmail", ownerEmail)
         if (ownerName.isNotBlank()) put("ownerName", ownerName)
         put("canWrite", canWrite)
+    }
+}
+
+data class DiscoveredRemoteFolder(
+    val remoteFolderId: String,
+    val remoteFolderName: String,
+    val kind: String = "master",
+    val shortCode: String = "",
+    val ownerEmail: String = "",
+    val ownerName: String = "",
+    val canWrite: Boolean = true,
+    val deviceNames: List<String> = emptyList(),
+    val devices: List<DeviceRegistration> = emptyList(),
+    val onRemoteDelete: String = "keep_local",
+    val onLocalDelete: String = "ignore",
+    val direction: String = "bidirectional",
+    val senderPolicy: SenderPolicy? = null
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("remoteFolderId", remoteFolderId)
+        put("remoteFolderName", remoteFolderName)
+        put("kind", kind)
+        if (shortCode.isNotBlank()) put("shortCode", shortCode)
+        if (ownerEmail.isNotBlank()) put("ownerEmail", ownerEmail)
+        if (ownerName.isNotBlank()) put("ownerName", ownerName)
+        put("canWrite", canWrite)
+        put("deviceNames", JSONArray().apply { deviceNames.forEach { put(it) } })
+        put("onRemoteDelete", onRemoteDelete)
+        put("onLocalDelete", onLocalDelete)
+        put("direction", direction)
+        if (senderPolicy != null) put("senderPolicy", senderPolicy.toJson())
+    }
+
+    companion object {
+        fun fromJson(obj: JSONObject): DiscoveredRemoteFolder {
+            val namesArr = obj.optJSONArray("deviceNames") ?: JSONArray()
+            val names = mutableListOf<String>()
+            for (i in 0 until namesArr.length()) {
+                val n = namesArr.optString(i, "").trim()
+                if (n.isNotEmpty()) names.add(n)
+            }
+            val policyObj = obj.optJSONObject("senderPolicy")
+            return DiscoveredRemoteFolder(
+                remoteFolderId = obj.optString("remoteFolderId", "").trim(),
+                remoteFolderName = obj.optString("remoteFolderName", "Pasta DriveSync").trim(),
+                kind = if (obj.optString("kind") == "personal") "personal" else "master",
+                shortCode = obj.optString("shortCode", "").trim(),
+                ownerEmail = obj.optString("ownerEmail", "").trim(),
+                ownerName = obj.optString("ownerName", "").trim(),
+                canWrite = obj.optBoolean("canWrite", true),
+                deviceNames = names,
+                onRemoteDelete = if (obj.optString("onRemoteDelete") == "mirror_trash") "mirror_trash" else "keep_local",
+                onLocalDelete = if (obj.optString("onLocalDelete") == "trash_remote") "trash_remote" else "ignore",
+                direction = if (obj.optString("direction") == "receive_only") "receive_only" else "bidirectional",
+                senderPolicy = policyObj?.let { SenderPolicy.fromJson(it) }
+            )
+        }
     }
 }
 

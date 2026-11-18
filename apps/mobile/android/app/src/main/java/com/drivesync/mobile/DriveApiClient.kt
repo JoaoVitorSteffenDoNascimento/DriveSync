@@ -155,7 +155,7 @@ class DriveApiClient(
             "'$safeParent' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
         }
         val url = "$DRIVE_API/files?q=${enc(q)}&fields=${
-            enc("files(id,name,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),appProperties)")
+            enc("files(id,name,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),properties,appProperties)")
         }&pageSize=200&orderBy=name_natural&supportsAllDrives=true&includeItemsFromAllDrives=true"
         val obj = requestJson("GET", url)
         val files = obj.optJSONArray("files") ?: JSONArray()
@@ -177,7 +177,7 @@ class DriveApiClient(
             }
         }
         val url = "$DRIVE_API/files?fields=${
-            enc("id,name,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),appProperties")
+            enc("id,name,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),properties,appProperties")
         }&supportsAllDrives=true"
         val obj = requestJson("POST", url, payload.toString())
         return parseFolderItem(obj, sharedHint = false)
@@ -185,7 +185,7 @@ class DriveApiClient(
 
     fun getFolderMeta(folderId: String): RemoteFolderItem {
         val url = "$DRIVE_API/files/${enc(folderId)}?fields=${
-            enc("id,name,mimeType,trashed,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),appProperties")
+            enc("id,name,mimeType,trashed,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),properties,appProperties")
         }&supportsAllDrives=true"
         return try {
             val obj = requestJson("GET", url)
@@ -207,12 +207,31 @@ class DriveApiClient(
         }
     }
 
-    fun setFolderInviteMetadata(folderId: String, kind: String, joinCode: String) {
+    fun ensureFolderKindMetadata(folderId: String, kind: String, folderName: String) {
         val props = JSONObject().apply {
-            put(DriveSyncConstants.JOIN_CODE_APP_PROP, joinCode.trim().uppercase())
-            put(DriveSyncConstants.FOLDER_KIND_APP_PROP, kind)
+            put(DriveSyncConstants.DS_FOLDER_KIND_PROP, kind)
+            if (folderName.isNotBlank() && folderName.length <= 100) {
+                put(DriveSyncConstants.DS_FOLDER_NAME_PROP, folderName)
+            }
         }
-        val payload = JSONObject().put("appProperties", props)
+        val payload = JSONObject().put("properties", props)
+        requestJson(
+            "PATCH",
+            "$DRIVE_API/files/${enc(folderId)}?supportsAllDrives=true",
+            payload.toString()
+        )
+    }
+
+    fun setFolderInviteMetadata(folderId: String, kind: String, joinCode: String, folderName: String = "") {
+        val normCode = joinCode.trim().uppercase()
+        val props = JSONObject().apply {
+            put(DriveSyncConstants.DS_JOIN_CODE_PROP, normCode)
+            put(DriveSyncConstants.DS_FOLDER_KIND_PROP, kind)
+            if (folderName.isNotBlank() && folderName.length <= 100) {
+                put(DriveSyncConstants.DS_FOLDER_NAME_PROP, folderName)
+            }
+        }
+        val payload = JSONObject().put("properties", props)
         requestJson(
             "PATCH",
             "$DRIVE_API/files/${enc(folderId)}?supportsAllDrives=true",
@@ -221,11 +240,13 @@ class DriveApiClient(
     }
 
     fun findFolderByJoinCode(shortCode: String): RemoteFolderItem? {
-        val norm = shortCode.trim().uppercase()
+        val norm = shortCode.trim().uppercase().replace("'", "\\'")
         val q =
-            "mimeType='application/vnd.google-apps.folder' and trashed=false and appProperties has { key='${DriveSyncConstants.JOIN_CODE_APP_PROP}' and value='${norm.replace("'", "\\'")}' }"
+            "mimeType='application/vnd.google-apps.folder' and trashed=false and (" +
+                "properties has { key='${DriveSyncConstants.DS_JOIN_CODE_PROP}' and value='$norm' } or " +
+                "appProperties has { key='${DriveSyncConstants.JOIN_CODE_APP_PROP}' and value='$norm' })"
         val url = "$DRIVE_API/files?q=${enc(q)}&fields=${
-            enc("files(id,name,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),appProperties)")
+            enc("files(id,name,shared,capabilities(canEdit,canAddChildren),owners(emailAddress,displayName),properties,appProperties)")
         }&pageSize=10&supportsAllDrives=true&includeItemsFromAllDrives=true"
         val obj = requestJson("GET", url)
         val arr = obj.optJSONArray("files") ?: return null
@@ -376,8 +397,14 @@ class DriveApiClient(
                 put("parents", JSONArray().put(parentFolderId))
             }
             val props = JSONObject().apply {
-                if (senderEmail.isNotBlank()) put("drivesyncSenderEmail", senderEmail)
-                if (senderName.isNotBlank()) put("drivesyncSenderName", senderName)
+                if (senderEmail.isNotBlank()) {
+                    put("ds_sender_email", senderEmail)
+                    put("drivesyncSenderEmail", senderEmail)
+                }
+                if (senderName.isNotBlank()) {
+                    put("ds_sender_name", senderName)
+                    put("drivesyncSenderName", senderName)
+                }
             }
             put("appProperties", props)
         }
@@ -487,8 +514,17 @@ class DriveApiClient(
 
     fun writeControlJson(rootFolderId: String, fileName: String, jsonText: String) {
         val devicesFolderId = ensureSubfolderPath(rootFolderId, listOf(DriveSyncConstants.CONTROL_DIR, "devices"))
+        upsertControlFile(devicesFolderId, fileName, jsonText)
+    }
+
+    fun writeFolderProfileJson(rootFolderId: String, jsonText: String) {
+        val ctrlFolderId = ensureSubfolderPath(rootFolderId, listOf(DriveSyncConstants.CONTROL_DIR))
+        upsertControlFile(ctrlFolderId, "folder-config.json", jsonText)
+    }
+
+    private fun upsertControlFile(parentFolderId: String, fileName: String, jsonText: String) {
         val escaped = fileName.replace("'", "\\'")
-        val q = "'${devicesFolderId.replace("'", "\\'")}' in parents and name='$escaped' and trashed=false"
+        val q = "'${parentFolderId.replace("'", "\\'")}' in parents and name='$escaped' and trashed=false"
         val check = requestJson(
             "GET",
             "$DRIVE_API/files?q=${enc(q)}&fields=files(id)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true"
@@ -496,7 +532,7 @@ class DriveApiClient(
         val existingId = check.optJSONArray("files")?.optJSONObject(0)?.optString("id")
         val bytes = jsonText.toByteArray(StandardCharsets.UTF_8)
         uploadStreamResumable(
-            parentFolderId = devicesFolderId,
+            parentFolderId = parentFolderId,
             fileName = fileName,
             existingFileId = existingId,
             mimeType = "application/json",
@@ -508,13 +544,7 @@ class DriveApiClient(
     }
 
     fun listControlJsons(rootFolderId: String, folderConfigId: String, currentDeviceId: String): List<DeviceRegistration> {
-        val qControl = "'${rootFolderId.replace("'", "\\'")}' in parents and name='${DriveSyncConstants.CONTROL_DIR}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-        val cObj = requestJson(
-            "GET",
-            "$DRIVE_API/files?q=${enc(qControl)}&fields=files(id)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true"
-        )
-        val controlId = cObj.optJSONArray("files")?.optJSONObject(0)?.optString("id") ?: return emptyList()
-
+        val controlId = findControlFolderId(rootFolderId) ?: return emptyList()
         val qDev = "'${controlId.replace("'", "\\'")}' in parents and name='devices' and mimeType='application/vnd.google-apps.folder' and trashed=false"
         val dObj = requestJson(
             "GET",
@@ -535,9 +565,7 @@ class DriveApiClient(
             if (!name.endsWith(".json")) continue
             val fid = fileObj.getString("id")
             runCatching {
-                val baos = java.io.ByteArrayOutputStream()
-                downloadFile(fid, baos)
-                val parsed = JSONObject(baos.toString(StandardCharsets.UTF_8.name()))
+                val parsed = readJsonFile(fid)
                 val did = parsed.optString("deviceId", "")
                 if (did.isNotBlank()) {
                     list.add(
@@ -561,12 +589,114 @@ class DriveApiClient(
         return list
     }
 
+    private fun findControlFolderId(rootFolderId: String): String? {
+        val qControl = "'${rootFolderId.replace("'", "\\'")}' in parents and name='${DriveSyncConstants.CONTROL_DIR}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        val cObj = requestJson(
+            "GET",
+            "$DRIVE_API/files?q=${enc(qControl)}&fields=files(id)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true"
+        )
+        return cObj.optJSONArray("files")?.optJSONObject(0)?.optString("id")?.takeIf { it.isNotBlank() }
+    }
+
+    private fun readJsonFile(fileId: String): JSONObject {
+        val baos = java.io.ByteArrayOutputStream()
+        downloadFile(fileId, baos)
+        return JSONObject(baos.toString(StandardCharsets.UTF_8.name()))
+    }
+
+    fun discoverAccountFolders(currentDeviceId: String): List<DiscoveredRemoteFolder> {
+        val queries = listOf(
+            "name='${DriveSyncConstants.CONTROL_DIR}' and mimeType='application/vnd.google-apps.folder' and trashed=false" to true,
+            "mimeType='application/vnd.google-apps.folder' and trashed=false and properties has { key='${DriveSyncConstants.DS_FOLDER_KIND_PROP}' and value='master' }" to false,
+            "mimeType='application/vnd.google-apps.folder' and trashed=false and properties has { key='${DriveSyncConstants.DS_FOLDER_KIND_PROP}' and value='personal' }" to false
+        )
+        val rootIds = linkedSetOf<String>()
+        for ((q, isControlQuery) in queries) {
+            runCatching {
+                val url = "$DRIVE_API/files?q=${enc(q)}&fields=files(id,parents)&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true"
+                val resp = requestJson("GET", url)
+                val files = resp.optJSONArray("files") ?: return@runCatching
+                for (i in 0 until files.length()) {
+                    val f = files.getJSONObject(i)
+                    if (isControlQuery) {
+                        val parents = f.optJSONArray("parents") ?: continue
+                        for (p in 0 until parents.length()) {
+                            val pid = parents.optString(p, "").trim()
+                            if (pid.isNotBlank()) rootIds.add(pid)
+                        }
+                    } else {
+                        val fid = f.optString("id", "").trim()
+                        if (fid.isNotBlank()) rootIds.add(fid)
+                    }
+                }
+            }
+        }
+
+        val results = mutableListOf<DiscoveredRemoteFolder>()
+        for (rootId in rootIds) {
+            val meta = runCatching { getFolderMeta(rootId) }.getOrNull() ?: continue
+            var kind = meta.kind.ifBlank { if (meta.shared) "master" else "master" }
+            var name = meta.name
+            var shortCode = meta.joinCode
+            var onRemoteDelete = "keep_local"
+            var onLocalDelete = "ignore"
+            var senderPolicy: SenderPolicy? = null
+
+            val ctrlId = runCatching { findControlFolderId(rootId) }.getOrNull()
+            if (!ctrlId.isNullOrBlank()) {
+                val qProfile = "'${ctrlId.replace("'", "\\'")}' in parents and name='folder-config.json' and trashed=false"
+                runCatching {
+                    val pObj = requestJson(
+                        "GET",
+                        "$DRIVE_API/files?q=${enc(qProfile)}&fields=files(id)&pageSize=1&supportsAllDrives=true&includeItemsFromAllDrives=true"
+                    )
+                    val pid = pObj.optJSONArray("files")?.optJSONObject(0)?.optString("id").orEmpty()
+                    if (pid.isNotBlank()) {
+                        val prof = readJsonFile(pid)
+                        prof.optString("kind", "").takeIf { it == "personal" || it == "master" }?.let { kind = it }
+                        prof.optString("remoteFolderName", "").takeIf { it.isNotBlank() }?.let { name = it }
+                        prof.optString("shortCode", "").takeIf { it.isNotBlank() && shortCode.isBlank() }?.let { shortCode = it }
+                        prof.optString("onRemoteDelete", "").takeIf { it == "keep_local" || it == "mirror_trash" }?.let { onRemoteDelete = it }
+                        prof.optString("onLocalDelete", "").takeIf { it == "ignore" || it == "trash_remote" }?.let { onLocalDelete = it }
+                        prof.optJSONObject("senderPolicy")?.let { senderPolicy = SenderPolicy.fromJson(it) }
+                    }
+                }
+            }
+
+            val devs = runCatching { listControlJsons(rootId, rootId, currentDeviceId) }.getOrDefault(emptyList())
+            val devNames = devs.mapNotNull { it.deviceName.takeIf { n -> n.isNotBlank() } }.distinct().sorted()
+            results.add(
+                DiscoveredRemoteFolder(
+                    remoteFolderId = meta.id,
+                    remoteFolderName = name,
+                    kind = kind,
+                    shortCode = shortCode,
+                    ownerEmail = meta.ownerEmail,
+                    ownerName = meta.ownerName,
+                    canWrite = meta.canWrite,
+                    deviceNames = devNames,
+                    devices = devs,
+                    onRemoteDelete = onRemoteDelete,
+                    onLocalDelete = onLocalDelete,
+                    direction = if (meta.canWrite) "bidirectional" else "receive_only",
+                    senderPolicy = senderPolicy
+                )
+            )
+        }
+        return results.sortedBy { it.remoteFolderName.lowercase() }
+    }
+
     private fun parseFolderItem(obj: JSONObject, sharedHint: Boolean): RemoteFolderItem {
         val caps = obj.optJSONObject("capabilities") ?: JSONObject()
         val canWrite = caps.optBoolean("canEdit", true) || caps.optBoolean("canAddChildren", false)
         val owners = obj.optJSONArray("owners")
         val owner = owners?.optJSONObject(0)
-        val props = obj.optJSONObject("appProperties")
+        val props = obj.optJSONObject("properties")
+        val appProps = obj.optJSONObject("appProperties")
+        val joinCode = props?.optString(DriveSyncConstants.DS_JOIN_CODE_PROP, "")?.takeIf { it.isNotBlank() }
+            ?: appProps?.optString(DriveSyncConstants.JOIN_CODE_APP_PROP, "").orEmpty()
+        val kind = props?.optString(DriveSyncConstants.DS_FOLDER_KIND_PROP, "")?.takeIf { it.isNotBlank() }
+            ?: appProps?.optString(DriveSyncConstants.FOLDER_KIND_APP_PROP, "").orEmpty()
         return RemoteFolderItem(
             id = obj.getString("id"),
             name = obj.optString("name", "Pasta sem nome"),
@@ -574,8 +704,8 @@ class DriveApiClient(
             ownerEmail = owner?.optString("emailAddress", "") ?: "",
             ownerName = owner?.optString("displayName", "") ?: "",
             canWrite = canWrite,
-            joinCode = props?.optString(DriveSyncConstants.JOIN_CODE_APP_PROP, "") ?: "",
-            kind = props?.optString(DriveSyncConstants.FOLDER_KIND_APP_PROP, "") ?: ""
+            joinCode = joinCode,
+            kind = kind
         )
     }
 
@@ -597,8 +727,10 @@ class DriveApiClient(
 
     private fun extractAuthor(obj: JSONObject): Pair<String, String> {
         val props = obj.optJSONObject("appProperties")
-        val propEmail = props?.optString("drivesyncSenderEmail", "")?.trim().orEmpty()
-        val propName = props?.optString("drivesyncSenderName", "")?.trim().orEmpty()
+        val propEmail = props?.optString("ds_sender_email", "")?.trim().orEmpty()
+            .ifBlank { props?.optString("drivesyncSenderEmail", "")?.trim().orEmpty() }
+        val propName = props?.optString("ds_sender_name", "")?.trim().orEmpty()
+            .ifBlank { props?.optString("drivesyncSenderName", "")?.trim().orEmpty() }
         val lastMod = obj.optJSONObject("lastModifyingUser")
         val lastEmail = lastMod?.optString("emailAddress", "")?.trim().orEmpty()
         val lastName = lastMod?.optString("displayName", "")?.trim().orEmpty()

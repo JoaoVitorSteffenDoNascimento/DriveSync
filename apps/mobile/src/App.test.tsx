@@ -147,6 +147,13 @@ function makeMockBridge(snap: MobileSnapshot): DriveSyncNativePlugin {
     cancelGoogleOAuth: vi.fn().mockResolvedValue({ ok: true }),
     disconnectAccount: vi.fn().mockResolvedValue({ ok: true }),
     pickLocalFolder: vi.fn().mockResolvedValue({ uri: 'content://mock/tree/Nova', displayName: 'Nova' }),
+    pickSyncRootFolder: vi.fn().mockResolvedValue({
+      uri: 'content://mock/tree/DriveSyncRoot',
+      displayName: 'DriveSync',
+      connectedCount: 1,
+    }),
+    discoverAccountFolders: vi.fn().mockResolvedValue({ items: snap.discoveredFolders ?? [] }),
+    syncDiscoveredFolders: vi.fn().mockResolvedValue({ folders: [] }),
     pickAndImportFiles: vi.fn().mockResolvedValue({ addedCount: 1, skippedOver4GB: [], errors: [] }),
     pickAndImportFolder: vi.fn().mockResolvedValue({ addedCount: 3, skippedOver4GB: [], errors: [] }),
     openLocalItem: vi.fn().mockResolvedValue({ ok: true }),
@@ -351,5 +358,52 @@ describe('MobileApp', () => {
       rcloneBtn?.click();
     });
     expect(bridge.pickAndImportRcloneConf).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra pastas descobertas da mesma conta Google e permite escolher onde salvar', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    const snap = makeSnapshot({
+      discoveredFolders: [
+        {
+          remoteFolderId: 'remote-pc-1',
+          remoteFolderName: 'Projetos PC',
+          kind: 'personal',
+          shortCode: 'DS-PC01-9999',
+          ownerEmail: 'brendha@gmail.com',
+          ownerName: 'Brendha',
+          canWrite: true,
+          deviceNames: ['Arch Desktop'],
+          onRemoteDelete: 'keep_local',
+          onLocalDelete: 'ignore',
+          direction: 'bidirectional',
+        },
+      ],
+    });
+    const bridge = makeMockBridge(snap);
+
+    await act(async () => {
+      root.render(<MobileApp bridge={bridge} />);
+    });
+    await act(async () => {});
+
+    expect(container.textContent).toContain('Pastas encontradas na sua conta Google (1)');
+    expect(container.textContent).toContain('Projetos PC');
+    expect(container.textContent).toContain('Arch Desktop');
+
+    const connectAllBtn = findButton(container, 'Escolher onde salvar e conectar todas');
+    expect(connectAllBtn).toBeDefined();
+    await act(async () => {
+      connectAllBtn?.click();
+    });
+    await act(async () => {});
+    expect(bridge.pickSyncRootFolder).toHaveBeenCalledWith({ autoConnectDiscovered: true });
+
+    const settingsTab = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('button.bottom-tab'),
+    ).find((b) => b.textContent?.includes('Configurações'));
+    await act(async () => {
+      settingsTab?.click();
+    });
+    expect(container.textContent).toContain('Escolher onde salvar arquivos');
   });
 });

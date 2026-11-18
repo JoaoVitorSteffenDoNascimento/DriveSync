@@ -92,6 +92,18 @@ func (m *mockDrive) GetFolderMeta(_ context.Context, folderID string) (drive.Fol
 	return drive.FolderMeta{ID: folderID, Name: "MockFolder", Kind: config.FolderKindMaster, CanWrite: m.canWriteRoot}, nil
 }
 
+func (m *mockDrive) EnsureFolderKindMetadata(context.Context, string, config.FolderKind, string) error {
+	return nil
+}
+
+func (m *mockDrive) WriteFolderProfileJSON(context.Context, string, []byte) error {
+	return nil
+}
+
+func (m *mockDrive) DiscoverDriveSyncFolders(context.Context) ([]config.DiscoveredRemoteFolder, error) {
+	return nil, nil
+}
+
 func (m *mockDrive) SetFolderInviteMetadata(context.Context, string, string, config.FolderKind, string) error {
 	return nil
 }

@@ -12,6 +12,8 @@ function createMockClient(snapshot: DaemonSnapshot): DaemonClient {
     updateSyncFolder: vi.fn().mockResolvedValue(snapshot.folders[0]),
     syncNow: vi.fn().mockResolvedValue({ started: true }),
     forgetDevice: vi.fn().mockResolvedValue({ deleted: true }),
+    discoverAccountFolders: vi.fn().mockResolvedValue(snapshot.discoveredFolders ?? []),
+    syncDiscoveredFolders: vi.fn().mockResolvedValue(snapshot.folders),
     listFolderContents: vi.fn().mockResolvedValue({
       folderId: snapshot.folders[0].id,
       folderName: snapshot.folders[0].name,
@@ -128,6 +130,21 @@ const sampleSnapshot: DaemonSnapshot = {
     },
   ],
   recentActivity: [],
+  discoveredFolders: [
+    {
+      remoteFolderId: 'gdrive-celular-1',
+      remoteFolderName: 'Fotos Celular',
+      kind: 'personal',
+      shortCode: 'DS-CEL1-2026',
+      ownerEmail: 'brendha@gmail.com',
+      ownerName: 'Brendha',
+      canWrite: true,
+      deviceNames: ['Galaxy S24'],
+      onRemoteDelete: 'keep_local',
+      onLocalDelete: 'ignore',
+      direction: 'bidirectional',
+    },
+  ],
 };
 
 describe('App UI DriveSync', () => {
@@ -143,6 +160,9 @@ describe('App UI DriveSync', () => {
     });
 
     expect(container.textContent).toContain('Drive Master Equipe');
+    expect(container.textContent).toContain('Pastas da sua conta em outros dispositivos (1)');
+    expect(container.textContent).toContain('Fotos Celular');
+    expect(container.textContent).toContain('Escolher onde salvar todas');
     expect(container.textContent).toContain('video-bruto.mkv');
     expect(container.textContent).toContain('4 GB');
 

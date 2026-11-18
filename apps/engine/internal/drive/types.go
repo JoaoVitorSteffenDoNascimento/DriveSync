@@ -49,6 +49,7 @@ type API interface {
 	ListFolders(ctx context.Context, parentID string, sharedWithMe bool) ([]config.RemoteFolderItem, error)
 	CreateFolder(ctx context.Context, name string, parentID string) (config.RemoteFolderItem, error)
 	GetFolderMeta(ctx context.Context, folderID string) (FolderMeta, error)
+	EnsureFolderKindMetadata(ctx context.Context, folderID string, kind config.FolderKind, folderName string) error
 	SetFolderInviteMetadata(ctx context.Context, folderID string, shortCode string, kind config.FolderKind, folderName string) error
 	FindFolderByJoinCode(ctx context.Context, shortCode string) (FolderMeta, bool, error)
 	ShareFolder(ctx context.Context, folderID string, in config.SharePermissionInput) error
@@ -59,4 +60,6 @@ type API interface {
 	TrashFile(ctx context.Context, fileID string) error
 	WriteControlJSON(ctx context.Context, rootFolderID string, fileName string, payload []byte) error
 	ListControlJSONs(ctx context.Context, rootFolderID string) (map[string][]byte, error)
+	WriteFolderProfileJSON(ctx context.Context, rootFolderID string, payload []byte) error
+	DiscoverDriveSyncFolders(ctx context.Context) ([]config.DiscoveredRemoteFolder, error)
 }

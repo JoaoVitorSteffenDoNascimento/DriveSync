@@ -3,6 +3,7 @@ import type {
   AppSettings,
   CreateFolderInput,
   DaemonSnapshot,
+  DiscoveredRemoteFolder,
   FolderContentsResponse,
   FolderInviteInfo,
   ImportPathsResult,
@@ -184,6 +185,20 @@ export class DaemonClient {
     return this.request<AppSettings>('/api/settings', {
       method: 'PUT',
       body: JSON.stringify(settings),
+    });
+  }
+
+  discoverAccountFolders(): Promise<DiscoveredRemoteFolder[]> {
+    return this.request<DiscoveredRemoteFolder[]>('/api/account/folders');
+  }
+
+  syncDiscoveredFolders(
+    basePath: string,
+    folders: DiscoveredRemoteFolder[],
+  ): Promise<SyncFolderConfig[]> {
+    return this.request<SyncFolderConfig[]>('/api/account/sync-discovered', {
+      method: 'POST',
+      body: JSON.stringify({ basePath, folders }),
     });
   }
 

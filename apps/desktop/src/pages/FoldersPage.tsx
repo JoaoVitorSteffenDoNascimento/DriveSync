@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  CloudDownload,
   Crown,
   FilePlus2,
   FolderOpen,
@@ -12,7 +13,7 @@ import {
   Settings2,
   Share2,
 } from 'lucide-react';
-import type { DaemonSnapshot, SyncFolderConfig } from '@drivesync/shared';
+import type { DaemonSnapshot, DiscoveredRemoteFolder, SyncFolderConfig } from '@drivesync/shared';
 import { formatBytes } from '@drivesync/shared';
 import type { DaemonClient } from '../api/daemonClient';
 import { FolderBrowserModal } from '../components/FolderBrowserModal';
@@ -57,7 +58,73 @@ export const FoldersPage: React.FC<Props> = ({
   const [sharingFolder, setSharingFolder] = useState<SyncFolderConfig | null>(null);
   const [browsingFolder, setBrowsingFolder] = useState<SyncFolderConfig | null>(null);
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
+  const [discovered, setDiscovered] = useState<DiscoveredRemoteFolder[]>(
+    snapshot.discoveredFolders ?? [],
+  );
+  const [loadingDiscovered, setLoadingDiscovered] = useState(false);
+  const [syncingDiscovered, setSyncingDiscovered] = useState(false);
   const blocked4gb = snapshot.blockedFiles.filter((b) => b.reason === 'exceeds_4gb');
+
+  const loadDiscovered = useCallback(async () => {
+    if (!snapshot.account.connected || !client.discoverAccountFolders) return;
+    setLoadingDiscovered(true);
+    try {
+      const list = await client.discoverAccountFolders();
+      setDiscovered(list);
+    } catch {
+      // ignora silenciosamente se offline ou mock
+    } finally {
+      setLoadingDiscovered(false);
+    }
+  }, [client, snapshot.account.connected]);
+
+  useEffect(() => {
+    void loadDiscovered();
+  }, [loadDiscovered, snapshot.folders.length]);
+
+  const handleConnectDiscovered = async (items: DiscoveredRemoteFolder[], pickSingleFolder = false) => {
+    if (items.length === 0) return;
+    let chosenPath = '';
+    if (pickSingleFolder || !snapshot.settings.syncRootPath) {
+      chosenPath = (await window.driveSyncDesktop?.selectLocalFolder()) ?? '';
+    } else {
+      chosenPath = snapshot.settings.syncRootPath;
+    }
+    if (!chosenPath) return;
+
+    setSyncingDiscovered(true);
+    try {
+      if (pickSingleFolder && items.length === 1) {
+        const one = items[0];
+        await client.createSyncFolder({
+          name: one.remoteFolderName,
+          localPath: chosenPath,
+          remoteFolderId: one.remoteFolderId,
+          remoteFolderName: one.remoteFolderName,
+          kind: one.kind,
+          direction: one.direction,
+          onRemoteDelete: one.onRemoteDelete,
+          onLocalDelete: one.onLocalDelete,
+          senderPolicy: one.senderPolicy ?? {
+            mode: one.kind === 'master' ? 'blocklist' : 'all',
+            unknownSenderAction: 'allow',
+            rules: [],
+          },
+        });
+      } else {
+        await client.syncDiscoveredFolders(chosenPath, items);
+      }
+      setQuickNotice(
+        `${items.length} pasta(s) da sua conta conectada(s) e sincronização iniciada em "${chosenPath}".`,
+      );
+      await onRefresh();
+      await loadDiscovered();
+    } catch (err) {
+      setQuickNotice(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncingDiscovered(false);
+    }
+  };
 
   const handleTogglePause = async (folder: SyncFolderConfig) => {
     await client.updateSyncFolder({ ...folder, paused: !folder.paused });
@@ -91,13 +158,25 @@ export const FoldersPage: React.FC<Props> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={snapshot.account.connected ? onOpenWizard : onOpenConnectGoogle}
-        >
-          <Plus size={16} /> Conectar Pasta
-        </button>
+        <div className="row-inline">
+          {snapshot.account.connected && (
+            <button
+              type="button"
+              className="btn"
+              disabled={loadingDiscovered}
+              onClick={() => void loadDiscovered()}
+            >
+              <RefreshCw size={15} /> Buscar pastas da conta
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={snapshot.account.connected ? onOpenWizard : onOpenConnectGoogle}
+          >
+            <Plus size={16} /> Conectar Pasta
+          </button>
+        </div>
       </div>
 
       {!snapshot.account.connected && (
@@ -142,6 +221,63 @@ export const FoldersPage: React.FC<Props> = ({
           <button type="button" className="btn btn-sm" onClick={onNavigateBlocked}>
             Ver detalhes
           </button>
+        </div>
+      )}
+
+      {snapshot.account.connected && discovered.length > 0 && (
+        <div className="card" style={{ borderColor: 'var(--primary)' }}>
+          <div className="folder-card-head" style={{ marginBottom: 10 }}>
+            <div>
+              <div className="row-inline">
+                <CloudDownload size={18} color="var(--primary)" />
+                <strong style={{ fontSize: 15 }}>
+                  Pastas da sua conta em outros dispositivos ({discovered.length})
+                </strong>
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
+                Encontramos pastas já sincronizadas na sua conta Google. Escolha onde salvar neste PC para sincronizar.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={syncingDiscovered}
+              onClick={() => void handleConnectDiscovered(discovered, false)}
+            >
+              <FolderOpen size={14} />{' '}
+              {snapshot.settings.syncRootPath
+                ? 'Sincronizar todas na pasta padrão'
+                : 'Escolher onde salvar todas'}
+            </button>
+          </div>
+
+          {discovered.map((item) => (
+            <div key={item.remoteFolderId} className="list-row">
+              <div>
+                <div className="row-inline">
+                  <strong>{item.remoteFolderName}</strong>
+                  <span className="badge badge-muted">
+                    {item.kind === 'master' ? 'Drive Master' : 'Pessoal'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {item.deviceNames.length > 0
+                    ? `Conectada em: ${item.deviceNames.join(', ')}`
+                    : item.ownerEmail
+                      ? `Dono: ${item.ownerEmail}`
+                      : 'Disponível na conta Google'}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={syncingDiscovered}
+                onClick={() => void handleConnectDiscovered([item], true)}
+              >
+                <FolderOpen size={14} /> Escolher onde salvar
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
