@@ -32,7 +32,7 @@
         <a class="brand" href="#topo">
           <img src="assets/icon.svg" alt="" width="28" height="28" style="border-radius: 7px" />
           <span>DriveSync</span>
-          <span class="brand-version" data-release-tag>v0.3.0</span>
+          <span class="brand-version" data-release-tag>v0.4.0</span>
         </a>
 
         <nav class="nav-links" aria-label="Navegação principal">
@@ -95,7 +95,7 @@
             Windows 10/11 (x64) • Download direto do instalador .exe
           </div>
 
-          <!-- Rich Visual Showcase: Multi-User & Multi-Device Hub -->
+          <!-- Responsive HTML/CSS Showcase: Multi-User & Multi-Device Hub -->
           <div class="hero-showcase">
             <div class="hero-showcase-inner">
               <div class="hero-showcase-top">
@@ -112,111 +112,126 @@
               </div>
 
               <div class="showcase-diagram-wrap">
-                <svg viewBox="0 0 860 300" role="img" aria-label="Ilustração visual mostrando o DriveSync conectando seus aparelhos pessoais (PC Windows, Celular Android e Notebook Linux) ao Google Drive e compartilhando pastas ao mesmo tempo com várias pessoas como Ana, João e Equipe.">
-                  <defs>
-                    <marker id="h-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
-                    </marker>
-                    <marker id="h-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
-                    </marker>
-                    <linearGradient id="hubGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="rgba(37, 99, 235, 0.25)" />
-                      <stop offset="100%" stop-color="rgba(16, 185, 129, 0.16)" />
-                    </linearGradient>
-                  </defs>
+                <div class="hub-diagram-grid">
+                  <!-- Left: Your Devices -->
+                  <div class="hub-col">
+                    <div class="hub-col-label hub-col-label--blue">Seus Aparelhos</div>
 
-                  <!-- Left Column Label -->
-                  <text x="128" y="24" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#93c5fd">SEUS APARELHOS CONECTADOS</text>
+                    <div class="hub-node hub-node--blue">
+                      <span class="hub-node-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+                          <rect x="2" y="3" width="20" height="14" rx="2" />
+                          <line x1="8" y1="21" x2="16" y2="21" />
+                          <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg>
+                      </span>
+                      <div>
+                        <div class="hub-node-title">PC de Casa (Windows)</div>
+                        <div class="hub-node-sub">Pasta escolhida • Online</div>
+                      </div>
+                    </div>
 
-                  <!-- Device 1: Windows PC -->
-                  <rect x="20" y="38" width="216" height="68" rx="12" fill="#0f172a" stroke="#3b82f6" stroke-width="1.6" />
-                  <rect x="34" y="54" width="34" height="34" rx="9" fill="rgba(59,130,246,0.16)" />
-                  <rect x="42" y="62" width="18" height="13" rx="2" fill="none" stroke="#60a5fa" stroke-width="1.8" />
-                  <line x1="46" y1="80" x2="56" y2="80" stroke="#60a5fa" stroke-width="1.8" />
-                  <text x="80" y="68" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">PC de Casa (Windows)</text>
-                  <text x="80" y="88" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Pasta escolhida • Online</text>
+                    <div class="hub-node hub-node--cyan">
+                      <span class="hub-node-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2">
+                          <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                          <line x1="12" y1="18" x2="12" y2="18.01" />
+                        </svg>
+                      </span>
+                      <div>
+                        <div class="hub-node-title">Celular Android</div>
+                        <div class="hub-node-sub">Tudo no bolso • Automático</div>
+                      </div>
+                    </div>
 
-                  <!-- Device 2: Android Phone -->
-                  <rect x="20" y="120" width="216" height="68" rx="12" fill="#0f172a" stroke="#22d3ee" stroke-width="1.6" />
-                  <rect x="34" y="136" width="34" height="34" rx="9" fill="rgba(34,211,238,0.14)" />
-                  <rect x="45" y="143" width="12" height="20" rx="2.5" fill="none" stroke="#22d3ee" stroke-width="1.8" />
-                  <circle cx="51" cy="159" r="1.2" fill="#22d3ee" />
-                  <text x="80" y="150" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Celular Android</text>
-                  <text x="80" y="170" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Tudo no bolso • Automático</text>
+                    <div class="hub-node hub-node--blue">
+                      <span class="hub-node-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2">
+                          <polyline points="4 17 10 11 4 5" />
+                          <line x1="12" y1="19" x2="20" y2="19" />
+                        </svg>
+                      </span>
+                      <div>
+                        <div class="hub-node-title">Notebook Trabalho (Linux)</div>
+                        <div class="hub-node-sub">Mesmos arquivos sempre</div>
+                      </div>
+                    </div>
+                  </div>
 
-                  <!-- Device 3: Linux Laptop -->
-                  <rect x="20" y="202" width="216" height="68" rx="12" fill="#0f172a" stroke="#60a5fa" stroke-width="1.6" />
-                  <rect x="34" y="218" width="34" height="34" rx="9" fill="rgba(96,165,250,0.14)" />
-                  <polyline points="44 230 50 235 44 240" fill="none" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                  <line x1="52" y1="241" x2="58" y2="241" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" />
-                  <text x="80" y="232" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Notebook Trabalho (Linux)</text>
-                  <text x="80" y="252" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Mesmos arquivos sempre</text>
+                  <div class="hub-arrow" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14M13 5l7 7-7 7" />
+                    </svg>
+                  </div>
 
-                  <!-- Left Arrows -->
-                  <line x1="242" y1="72" x2="320" y2="128" stroke="#60a5fa" stroke-width="2" marker-start="url(#h-blue)" marker-end="url(#h-blue)" />
-                  <line x1="242" y1="154" x2="314" y2="154" stroke="#22d3ee" stroke-width="2" marker-start="url(#h-blue)" marker-end="url(#h-blue)" />
-                  <line x1="242" y1="236" x2="320" y2="180" stroke="#60a5fa" stroke-width="2" marker-start="url(#h-blue)" marker-end="url(#h-blue)" />
+                  <!-- Center: DriveSync Hub -->
+                  <div class="hub-center-box">
+                    <span class="hub-center-icon" aria-hidden="true">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M7 18h10a4 4 0 0 0 .6-7.9A5.5 5.5 0 0 0 6.8 9a4.5 4.5 0 0 0 .2 9Z" fill="#ffffff" />
+                      </svg>
+                    </span>
+                    <div class="hub-center-title">DriveSync</div>
+                    <div class="hub-center-sub">Sua conta Google Drive</div>
+                    <span class="hub-center-pill">Cópia protegida • Trava 4 GB</span>
+                  </div>
 
-                  <!-- Center Hub: DriveSync + Google Drive -->
-                  <rect x="326" y="76" width="208" height="156" rx="20" fill="url(#hubGrad)" stroke="#3b82f6" stroke-width="2.2" />
-                  <circle cx="430" cy="126" r="24" fill="#2563eb" />
-                  <path d="M417 134h25a6.5 6.5 0 0 0 1-12.9A9.5 9.5 0 0 0 424.5 119a7.5 7.5 0 0 0-7.5 15Z" fill="#ffffff" />
-                  <text x="430" y="174" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="18" font-weight="700" fill="#ffffff">DriveSync</text>
-                  <text x="430" y="195" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#bfdbfe">Sua conta Google Drive</text>
-                  <rect x="358" y="206" width="144" height="18" rx="9" fill="rgba(16,185,129,0.2)" />
-                  <text x="430" y="219" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#6ee7b7">Cópia protegida • Trava 4 GB</text>
+                  <div class="hub-arrow" aria-hidden="true" style="color: var(--accent-emerald)">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14M13 5l7 7-7 7" />
+                    </svg>
+                  </div>
 
-                  <!-- Right Arrows -->
-                  <line x1="540" y1="128" x2="618" y2="72" stroke="#34d399" stroke-width="2" marker-start="url(#h-green)" marker-end="url(#h-green)" />
-                  <line x1="546" y1="154" x2="618" y2="154" stroke="#34d399" stroke-width="2" marker-start="url(#h-green)" marker-end="url(#h-green)" />
-                  <line x1="540" y1="180" x2="618" y2="236" stroke="#34d399" stroke-width="2" marker-start="url(#h-green)" marker-end="url(#h-green)" />
+                  <!-- Right: Multiple Users -->
+                  <div class="hub-col">
+                    <div class="hub-col-label hub-col-label--green">Vários Usuários</div>
 
-                  <!-- Right Column Label -->
-                  <text x="732" y="24" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="12.5" font-weight="700" fill="#6ee7b7">VÁRIOS USUÁRIOS NA PASTA</text>
+                    <div class="hub-node hub-node--green">
+                      <span class="avatar-dot avatar-dot--emerald">A</span>
+                      <div>
+                        <div class="hub-node-title">Ana • Notebook</div>
+                        <div class="hub-node-sub">Enviando fotos novas</div>
+                      </div>
+                    </div>
 
-                  <!-- User 1: Ana -->
-                  <rect x="624" y="38" width="216" height="68" rx="12" fill="#0f172a" stroke="#10b981" stroke-width="1.6" />
-                  <circle cx="651" cy="72" r="16" fill="#059669" />
-                  <text x="651" y="77" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">A</text>
-                  <text x="680" y="68" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Ana • Notebook</text>
-                  <text x="680" y="88" font-family="Inter, sans-serif" font-size="12" fill="#6ee7b7">Enviando fotos novas</text>
+                    <div class="hub-node hub-node--violet">
+                      <span class="avatar-dot avatar-dot--violet">J</span>
+                      <div>
+                        <div class="hub-node-title">João • Celular</div>
+                        <div class="hub-node-sub">Recebendo em tempo real</div>
+                      </div>
+                    </div>
 
-                  <!-- User 2: Joao -->
-                  <rect x="624" y="120" width="216" height="68" rx="12" fill="#0f172a" stroke="#8b5cf6" stroke-width="1.6" />
-                  <circle cx="651" cy="154" r="16" fill="#7c3aed" />
-                  <text x="651" y="159" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">J</text>
-                  <text x="680" y="150" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">João • Celular</text>
-                  <text x="680" y="170" font-family="Inter, sans-serif" font-size="12" fill="#c4b5fd">Recebendo em tempo real</text>
-
-                  <!-- User 3: Equipe / Amigos -->
-                  <rect x="624" y="202" width="216" height="68" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="1.6" />
-                  <circle cx="651" cy="236" r="16" fill="#d97706" />
-                  <text x="651" y="241" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">+</text>
-                  <text x="680" y="232" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Convidados / Equipe</text>
-                  <text x="680" y="252" font-family="Inter, sans-serif" font-size="12" fill="#fde68a">Entraram com código simples</text>
-                </svg>
+                    <div class="hub-node hub-node--amber">
+                      <span class="avatar-dot avatar-dot--amber">+</span>
+                      <div>
+                        <div class="hub-node-title">Convidados / Equipe</div>
+                        <div class="hub-node-sub">Entraram com código simples</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Consumer-Friendly Highlights Strip -->
+          <!-- Consumer-Friendly Larger Highlight Boxes -->
           <div class="metrics-strip" aria-label="Principais facilidades do DriveSync">
             <div class="metric-box">
               <div class="metric-val">1 Clique</div>
-              <div class="metric-label">Entre direto com sua conta Google, sem configurações difíceis.</div>
+              <div class="metric-label">Entre direto com sua conta Google, sem senhas extras ou configurações complicadas.</div>
             </div>
             <div class="metric-box">
               <div class="metric-val is-cyan">Mesmo E-mail</div>
-              <div class="metric-label">Tudo o que você salva no PC aparece no celular automaticamente.</div>
+              <div class="metric-label">Tudo o que você salva no computador aparece automaticamente no seu celular.</div>
             </div>
             <div class="metric-box">
               <div class="metric-val is-emerald">Vários Usuários</div>
-              <div class="metric-label">Compartilhe pastas para amigos, turma ou equipe e filtre remetentes.</div>
+              <div class="metric-label">Compartilhe pastas com amigos, turma ou equipe e veja quem está enviando cada arquivo.</div>
             </div>
             <div class="metric-box">
               <div class="metric-val">Cópia Segura</div>
-              <div class="metric-label">Se alguém apagar algo na nuvem, seus arquivos baixados continuam salvos.</div>
+              <div class="metric-label">Se alguém apagar algo na nuvem, os arquivos que você já baixou continuam salvos.</div>
             </div>
           </div>
         </div>
@@ -259,14 +274,15 @@
                 >
                   Baixar .exe
                 </a>
-                <div class="alt-links">
+                <div class="format-bar">
+                  <span class="format-label">Corporativo:</span>
                   <a
-                    class="chip-link"
+                    class="format-link"
                     data-asset-key="win-msi"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Windows-x64.msi"
                     download="DriveSync-Windows-x64.msi"
                   >
-                    Pacote .msi
+                    Instalador .msi
                   </a>
                 </div>
               </div>
@@ -303,25 +319,28 @@
                 >
                   Baixar .AppImage
                 </a>
-                <div class="alt-links">
+                <div class="format-bar">
+                  <span class="format-label">Distros:</span>
                   <a
-                    class="chip-link"
+                    class="format-link"
                     data-asset-key="linux-deb"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.deb"
                     download="DriveSync-Linux-x64.deb"
                   >
                     .deb
                   </a>
+                  <span class="format-sep" aria-hidden="true">•</span>
                   <a
-                    class="chip-link"
+                    class="format-link"
                     data-asset-key="linux-rpm"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.rpm"
                     download="DriveSync-Linux-x64.rpm"
                   >
                     .rpm
                   </a>
+                  <span class="format-sep" aria-hidden="true">•</span>
                   <a
-                    class="chip-link"
+                    class="format-link"
                     data-asset-key="linux-pacman"
                     href="https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.pacman"
                     download="DriveSync-Linux-x64.pacman"
@@ -363,13 +382,14 @@
                 >
                   Baixar .apk
                 </a>
-                <div class="alt-links">
+                <div class="format-bar">
+                  <span class="format-label">No computador?</span>
                   <button
                     type="button"
-                    class="chip-link"
+                    class="format-link"
                     data-copy="https://joaovitorsteffendonascimento.github.io/DriveSync/"
                   >
-                    Copiar link para abrir no celular
+                    Copiar link para o celular
                   </button>
                 </div>
               </div>
@@ -378,7 +398,7 @@
         </div>
       </section>
 
-      <!-- How It Works: 3 Easy Steps + Friendly Illustrated Diagrams -->
+      <!-- How It Works: 3 Easy Steps + Responsive Visual Diagrams -->
       <section id="como-funciona" class="section container" style="padding-top: 24px">
         <div class="section-head">
           <h2>Como funciona? Simples do início ao fim</h2>
@@ -413,14 +433,14 @@
               <div class="step-num">3</div>
               <h3>Compartilhe e fique tranquilo</h3>
               <p>
-                Adicione arquivos, convide outras pessoas com um código fácil e conte com proteção automática contra exclusões e arquivos gigantes.
+                Adicione arquivos, acompanhe quem está enviando em tempo real e conte com proteção contra exclusões e arquivos gigantes.
               </p>
             </div>
           </article>
         </div>
 
         <div class="arch-grid">
-          <!-- Diagrama Amigável 1: Seus Aparelhos Juntos -->
+          <!-- Diagrama 1 (HTML/CSS Responsivo): Seus Aparelhos Juntos -->
           <article class="spotlight-card diagram-card">
             <div class="card-surface">
               <div class="diagram-header">
@@ -432,52 +452,53 @@
               </div>
 
               <div class="diagram-canvas">
-                <svg viewBox="0 0 540 265" role="img" aria-label="Ilustração simples mostrando uma foto adicionada no celular sendo enviada para o Google Drive e baixada automaticamente para a pasta escolhida no computador.">
-                  <defs>
-                    <marker id="f1-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
-                    </marker>
-                    <marker id="f1-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
-                    </marker>
-                  </defs>
+                <div class="flow-steps-row">
+                  <div class="flow-step-box flow-step-box--cyan">
+                    <div class="flow-step-title">No Celular</div>
+                    <div class="flow-step-desc">Você salva uma foto ou documento na pasta do aparelho.</div>
+                    <div class="flow-step-highlight">Memória interna / Pasta</div>
+                  </div>
 
-                  <rect x="16" y="24" width="150" height="114" rx="12" fill="#111827" stroke="#22d3ee" stroke-width="1.6" />
-                  <text x="91" y="54" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">No Celular</text>
-                  <text x="91" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">Você salva uma foto</text>
-                  <text x="91" y="94" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">ou documento na</text>
-                  <text x="91" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#67e8f9">Memória interna/Pasta</text>
+                  <div class="flow-step-arrow" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14M13 5l7 7-7 7" />
+                    </svg>
+                  </div>
 
-                  <line x1="170" y1="81" x2="206" y2="81" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#f1-blue)" />
+                  <div class="flow-step-box flow-step-box--blue">
+                    <div class="flow-step-title">Google Drive</div>
+                    <div class="flow-step-desc">Mostra quem está enviando e envia na hora.</div>
+                    <div class="flow-step-highlight" style="color: #bfdbfe">Sincronização ativa</div>
+                  </div>
 
-                  <rect x="212" y="24" width="116" height="114" rx="14" fill="rgba(37,99,235,0.16)" stroke="#3b82f6" stroke-width="1.8" />
-                  <circle cx="270" cy="60" r="17" fill="#2563eb" />
-                  <path d="M261 65h17a4.5 4.5 0 0 0 .7-9 6.5 6.5 0 0 0-12.5-1.4 5 5 0 0 0-5.2 10.4Z" fill="#ffffff" />
-                  <text x="270" y="97" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">Google Drive</text>
-                  <text x="270" y="116" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" fill="#bfdbfe">Envia na hora</text>
+                  <div class="flow-step-arrow" aria-hidden="true" style="color: var(--accent-emerald)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14M13 5l7 7-7 7" />
+                    </svg>
+                  </div>
 
-                  <line x1="332" y1="81" x2="368" y2="81" stroke="#34d399" stroke-width="2.2" marker-end="url(#f1-green)" />
+                  <div class="flow-step-box flow-step-box--green">
+                    <div class="flow-step-title">No Seu PC</div>
+                    <div class="flow-step-desc">Aparece sozinho na pasta que você escolheu guardar.</div>
+                    <div class="flow-step-highlight" style="color: #6ee7b7">Cópia atualizada</div>
+                  </div>
+                </div>
 
-                  <rect x="374" y="24" width="150" height="114" rx="12" fill="#111827" stroke="#10b981" stroke-width="1.6" />
-                  <text x="449" y="54" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#ffffff">No Seu PC</text>
-                  <text x="449" y="76" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">Aparece sozinho na</text>
-                  <text x="449" y="94" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">pasta que você</text>
-                  <text x="449" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#6ee7b7">escolheu guardar</text>
-
-                  <!-- Bottom device discovery banner inside diagram -->
-                  <rect x="16" y="162" width="508" height="82" rx="12" fill="#0f172a" stroke="#334155" />
-                  <text x="34" y="188" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#93c5fd">Comprou um celular ou computador novo?</text>
-                  <text x="34" y="210" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">É só fazer login no mesmo Google: o app lista todos os seus outros aparelhos</text>
-                  <text x="34" y="228" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">e pergunta onde você quer salvar cada pasta nesse novo dispositivo.</text>
-                </svg>
+                <div class="discovery-callout">
+                  <div class="discovery-callout-title">Comprou um celular ou computador novo?</div>
+                  <p>
+                    É só fazer login no mesmo Google: o app lista todos os seus outros aparelhos conectados e pergunta em qual pasta local você quer salvar cada pasta nesse novo dispositivo.
+                  </p>
+                </div>
               </div>
+
               <div class="diagram-caption">
                 Você sempre tem liberdade para escolher exatamente em qual pasta do PC ou do celular seus arquivos serão armazenados.
               </div>
             </div>
           </article>
 
-          <!-- Diagrama Amigável 2: Dupla Proteção -->
+          <!-- Diagrama 2 (HTML/CSS Responsivo): Dupla Proteção -->
           <article class="spotlight-card diagram-card">
             <div class="card-surface">
               <div class="diagram-header">
@@ -489,104 +510,119 @@
               </div>
 
               <div class="diagram-canvas">
-                <svg viewBox="0 0 540 265" role="img" aria-label="Ilustração mostrando duas proteções automáticas: 1) Se alguém apagar um arquivo no Google Drive, a cópia já baixada continua salva no seu aparelho; 2) Arquivos maiores que 4 GB ficam barrados automaticamente antes de tentar enviar.">
-                  <!-- Top Box: Delete protection -->
-                  <rect x="16" y="20" width="508" height="104" rx="12" fill="#0f172a" stroke="#10b981" stroke-width="1.6" />
-                  <circle cx="52" cy="72" r="20" fill="rgba(16,185,129,0.16)" />
-                  <path d="M52 58l11 4.5v8.5c0 7-4.7 13-11 15-6.3-2-11-8-11-15v-8.5L52 58Z" fill="none" stroke="#34d399" stroke-width="2" />
-                  <text x="88" y="54" font-family="Space Grotesk, sans-serif" font-size="14.5" font-weight="700" fill="#6ee7b7">Proteção contra exclusões na nuvem</text>
-                  <text x="88" y="76" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">Se outra pessoa (ou alguém por engano) apagar um arquivo no Google Drive,</text>
-                  <text x="88" y="96" font-family="Inter, sans-serif" font-size="12.5" fill="#cbd5e1">o DriveSync mantém a cópia que você já baixou segura no seu PC ou celular.</text>
+                <div class="protection-list">
+                  <div class="protection-item protection-item--green">
+                    <span class="protection-icon protection-icon--green" aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div class="protection-title protection-title--green">Proteção contra exclusões na nuvem</div>
+                      <div class="protection-desc">
+                        Se outra pessoa (ou alguém por engano) apagar um arquivo no Google Drive, o DriveSync mantém a cópia que você já baixou segura no seu PC ou celular.
+                      </div>
+                    </div>
+                  </div>
 
-                  <!-- Bottom Box: 4GB limit -->
-                  <rect x="16" y="142" width="508" height="104" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="1.6" />
-                  <circle cx="52" cy="194" r="20" fill="rgba(245,158,11,0.16)" />
-                  <circle cx="52" cy="194" r="11" fill="none" stroke="#fbbf24" stroke-width="2" />
-                  <line x1="52" y1="189" x2="52" y2="195" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" />
-                  <circle cx="52" cy="199" r="1.2" fill="#fbbf24" />
-                  <text x="88" y="176" font-family="Space Grotesk, sans-serif" font-size="14.5" font-weight="700" fill="#fde68a">Trava inteligente para arquivos maiores que 4 GB</text>
-                  <text x="88" y="198" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">Arquivos gigantes (como vídeos pesados ou imagens de disco acima de 4 GB)</text>
-                  <text x="88" y="218" font-family="Inter, sans-serif" font-size="12.5" fill="#cbd5e1">são barrados antes de enviar e avisados no app, evitando gastar toda a sua internet.</text>
-                </svg>
+                  <div class="protection-item protection-item--amber">
+                    <span class="protection-icon protection-icon--amber" aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div class="protection-title protection-title--amber">Trava inteligente para arquivos maiores que 4 GB</div>
+                      <div class="protection-desc">
+                        Arquivos gigantes (como vídeos pesados ou imagens de disco acima de 4 GB) são barrados antes de enviar e avisados no app, evitando gastar toda a sua internet.
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               <div class="diagram-caption">
                 Se preferir espelhar exclusões de verdade em alguma pasta específica, você também pode ativar a Quarentena nas Opções da pasta.
               </div>
             </div>
           </article>
 
-          <!-- Diagrama Amigável 3: Para Grupos / Multi-Usuários (#equipes) -->
+          <!-- Diagrama 3 (HTML/CSS Responsivo): Multi-Usuários Drive Master -->
           <article id="equipes" class="spotlight-card diagram-card diagram-card--wide">
             <div class="card-surface">
               <div class="diagram-header">
                 <div>
                   <h3>Vários usuários juntos no Modo Drive Master (Amigos, Turma ou Equipe)</h3>
                   <p>
-                    Compartilhe uma pasta usando apenas um código fácil e escolha de quem você quer baixar arquivos no seu aparelho.
+                    Compartilhe uma pasta usando apenas um código fácil, acompanhe quem está enviando cada arquivo e escolha de quem deseja receber no seu aparelho.
                   </p>
                 </div>
                 <span class="diagram-tag">Multi-Usuários</span>
               </div>
 
               <div class="diagram-canvas">
-                <svg viewBox="0 0 860 245" role="img" aria-label="Diagrama em linguagem simples mostrando vários usuários (Ana, João, Maria) conectados à mesma pasta compartilhada usando um código curto, enviando arquivos para a pasta, e o usuário principal filtrando facilmente quem pode enviar arquivos para o seu computador ou celular.">
-                  <defs>
-                    <marker id="g-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#34d399" />
-                    </marker>
-                    <marker id="g-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#f87171" />
-                    </marker>
-                    <marker id="g-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M0 1 L10 5 L0 9 z" fill="#60a5fa" />
-                    </marker>
-                  </defs>
+                <div class="master-flow-grid">
+                  <!-- Members column -->
+                  <div class="hub-col">
+                    <div class="hub-node hub-node--green">
+                      <span class="avatar-dot avatar-dot--emerald">J</span>
+                      <div>
+                        <div class="hub-node-title">João (Aceito)</div>
+                        <div class="hub-node-sub">Enviando documentos agora</div>
+                      </div>
+                    </div>
 
-                  <!-- People Column -->
-                  <rect x="18" y="20" width="228" height="60" rx="11" fill="#111827" stroke="#10b981" stroke-width="1.6" />
-                  <circle cx="46" cy="50" r="14" fill="#059669" />
-                  <text x="46" y="55" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#ffffff">J</text>
-                  <text x="72" y="46" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">João (Aceito)</text>
-                  <text x="72" y="64" font-family="Inter, sans-serif" font-size="11.5" fill="#6ee7b7">Envia documentos para a pasta</text>
+                    <div class="hub-node hub-node--blue">
+                      <span class="avatar-dot avatar-dot--blue">A</span>
+                      <div>
+                        <div class="hub-node-title">Ana (Aceita)</div>
+                        <div class="hub-node-sub">Enviou fotos da viagem no celular</div>
+                      </div>
+                    </div>
 
-                  <rect x="18" y="92" width="228" height="60" rx="11" fill="#111827" stroke="#3b82f6" stroke-width="1.6" />
-                  <circle cx="46" cy="122" r="14" fill="#2563eb" />
-                  <text x="46" y="127" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#ffffff">A</text>
-                  <text x="72" y="118" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">Ana (Aceita)</text>
-                  <text x="72" y="136" font-family="Inter, sans-serif" font-size="11.5" fill="#93c5fd">Envia fotos da viagem no celular</text>
+                    <div class="hub-node hub-node--red">
+                      <span class="avatar-dot avatar-dot--red">L</span>
+                      <div>
+                        <div class="hub-node-title">Luiz (Pausado por você)</div>
+                        <div class="hub-node-sub">Arquivos dele não descem no seu PC</div>
+                      </div>
+                    </div>
+                  </div>
 
-                  <rect x="18" y="164" width="228" height="60" rx="11" fill="#111827" stroke="#ef4444" stroke-width="1.6" stroke-dasharray="4 3" />
-                  <circle cx="46" cy="194" r="14" fill="#b91c1c" />
-                  <text x="46" y="199" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" fill="#ffffff">L</text>
-                  <text x="72" y="190" font-family="Space Grotesk, sans-serif" font-size="13.5" font-weight="700" fill="#ffffff">Luiz (Pausado por você)</text>
-                  <text x="72" y="208" font-family="Inter, sans-serif" font-size="11.5" fill="#fca5a5">Arquivos dele não descem no seu PC</text>
-
-                  <!-- Arrows to Shared Folder -->
-                  <line x1="250" y1="50" x2="328" y2="102" stroke="#34d399" stroke-width="2" marker-end="url(#g-green)" />
-                  <line x1="250" y1="122" x2="324" y2="122" stroke="#60a5fa" stroke-width="2" marker-end="url(#g-blue)" />
-                  <line x1="250" y1="194" x2="328" y2="142" stroke="#f87171" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#g-red)" />
+                  <div class="hub-arrow" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14M13 5l7 7-7 7" />
+                    </svg>
+                  </div>
 
                   <!-- Center Master Folder -->
-                  <rect x="334" y="42" width="228" height="160" rx="16" fill="rgba(37,99,235,0.12)" stroke="#3b82f6" stroke-width="2" />
-                  <text x="448" y="74" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="16" font-weight="700" fill="#ffffff">Pasta Compartilhada</text>
-                  <text x="448" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#93c5fd">Modo Drive Master</text>
-                  <rect x="366" y="112" width="164" height="28" rx="14" fill="#0f172a" stroke="#3b82f6" />
-                  <text x="448" y="130" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600" fill="#ffffff">Convite: DS-4829-KP7M</text>
-                  <text x="448" y="164" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">Cada pessoa decide se quer apenas</text>
-                  <text x="448" y="182" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">receber ou enviar e receber arquivos</text>
+                  <div class="master-center-box">
+                    <div class="hub-center-title">Pasta Compartilhada</div>
+                    <div class="hub-center-sub">Modo Drive Master</div>
+                    <span class="master-code-pill">Convite: DS-4829-KP7M</span>
+                    <div class="hub-node-sub" style="text-align: center">
+                      Cada pessoa decide se quer apenas receber ou enviar e receber arquivos, visualizando quem enviou cada item.
+                    </div>
+                  </div>
 
-                  <!-- Arrow to Your Device -->
-                  <line x1="566" y1="122" x2="626" y2="122" stroke="#34d399" stroke-width="2.4" marker-end="url(#g-green)" />
+                  <div class="hub-arrow" aria-hidden="true" style="color: var(--accent-emerald)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M5 12h14M13 5l7 7-7 7" />
+                    </svg>
+                  </div>
 
-                  <!-- Right Result Card -->
-                  <rect x="632" y="42" width="210" height="160" rx="16" fill="rgba(16,185,129,0.1)" stroke="#10b981" stroke-width="1.8" />
-                  <text x="737" y="76" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="15.5" font-weight="700" fill="#6ee7b7">No Seu Aparelho</text>
-                  <text x="737" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">Chegam apenas os</text>
-                  <text x="737" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">arquivos de João e Ana,</text>
-                  <text x="737" y="142" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">sem bagunçar sua pasta</text>
-                  <text x="737" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#e2e8f0">e sem incomodar o grupo.</text>
-                </svg>
+                  <!-- Result Box -->
+                  <div class="master-result-box">
+                    <h4>No Seu Aparelho</h4>
+                    <p>
+                      Chegam apenas os arquivos de João e Ana, identificando claramente o status de envio e o autor de cada arquivo sem bagunçar sua pasta.
+                    </p>
+                  </div>
+                </div>
               </div>
+
               <div class="diagram-caption">
                 Ideal para grupos de trabalho, famílias, aulas ou projetos: basta compartilhar o código para outras pessoas entrarem com 1 clique.
               </div>
@@ -652,9 +688,9 @@
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
-              <h3>Convite rápido para novos membros</h3>
+              <h3>Veja quem envia e acompanhe o progresso</h3>
               <p>
-                Gere um código curto ou link direto da pasta para conectar colegas, familiares ou outros computadores e celulares em poucos segundos.
+                Abra qualquer pasta ou veja no cartão se um arquivo está sendo enviado no momento, se já foi sincronizado e exatamente por quem foi enviado.
               </p>
             </div>
           </div>

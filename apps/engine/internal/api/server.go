@@ -702,6 +702,9 @@ func (s *Server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 		if maxBytes <= 0 || maxBytes > config.MaxUploadBytes {
 			maxBytes = config.MaxUploadBytes
 		}
+		stateMap, _ := s.store.GetSyncedFiles(folder.ID)
+		account, _ := s.store.GetAccount()
+		rt := s.syncer.GetAllRuntime()[folder.ID]
 
 		items := make([]config.FolderContentItem, 0, len(entries))
 		for _, ent := range entries {
@@ -722,6 +725,36 @@ func (s *Server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 			if !isDir {
 				sz = info.Size()
 			}
+			syncStatus := ""
+			senderName := ""
+			senderEmail := ""
+			if !isDir {
+				if sz > maxBytes {
+					syncStatus = "blocked_4gb"
+					senderName = config.FirstNonEmpty(account.DisplayName, account.Email)
+					senderEmail = account.Email
+				} else if rt.Status == "syncing" && rt.CurrentFile == rel {
+					syncStatus = "sending"
+					senderName = config.FirstNonEmpty(rt.CurrentAuthor, account.DisplayName, account.Email)
+					senderEmail = account.Email
+				} else if st, ok := stateMap[rel]; ok && !st.DeletedOnRemote {
+					syncStatus = "synced"
+					senderName = config.FirstNonEmpty(st.AuthorName, st.AuthorEmail)
+					senderEmail = st.AuthorEmail
+					if st.Origin == "local" && senderName == "" && senderEmail == "" {
+						senderName = config.FirstNonEmpty(account.DisplayName, account.Email)
+						senderEmail = account.Email
+					}
+				} else if folder.Direction == config.DirectionReceiveOnly {
+					syncStatus = "local_only"
+					senderName = config.FirstNonEmpty(account.DisplayName, account.Email)
+					senderEmail = account.Email
+				} else {
+					syncStatus = "pending"
+					senderName = config.FirstNonEmpty(account.DisplayName, account.Email)
+					senderEmail = account.Email
+				}
+			}
 			items = append(items, config.FolderContentItem{
 				Name:         name,
 				RelativePath: rel,
@@ -729,6 +762,9 @@ func (s *Server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 				SizeBytes:    sz,
 				ModifiedAt:   info.ModTime().Format(time.RFC3339),
 				Exceeds4GB:   !isDir && sz > maxBytes,
+				SyncStatus:   syncStatus,
+				SenderName:   senderName,
+				SenderEmail:  senderEmail,
 			})
 		}
 		sort.Slice(items, func(i, j int) bool {

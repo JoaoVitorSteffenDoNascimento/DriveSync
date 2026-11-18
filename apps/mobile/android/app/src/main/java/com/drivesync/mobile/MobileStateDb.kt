@@ -14,7 +14,7 @@ class MobileStateDb(context: Context) :
 
     companion object {
         private const val DB_NAME = "drivesync_mobile.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
 
         private const val KV_OAUTH_CLIENT = "oauth_client"
         private const val KV_OAUTH_TOKEN = "oauth_token"
@@ -73,6 +73,8 @@ class MobileStateDb(context: Context) :
               kept_local_hash TEXT NOT NULL DEFAULT '',
               kept_local_mtime_ms INTEGER NOT NULL DEFAULT 0,
               ignored_local_delete INTEGER NOT NULL DEFAULT 0,
+              author_email TEXT NOT NULL DEFAULT '',
+              author_name TEXT NOT NULL DEFAULT '',
               PRIMARY KEY (folder_id, relative_path)
             )
             """.trimIndent()
@@ -140,7 +142,12 @@ class MobileStateDb(context: Context) :
         )
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            runCatching { db.execSQL("ALTER TABLE synced_files ADD COLUMN author_email TEXT NOT NULL DEFAULT ''") }
+            runCatching { db.execSQL("ALTER TABLE synced_files ADD COLUMN author_name TEXT NOT NULL DEFAULT ''") }
+        }
+    }
 
     @Synchronized
     private fun getKv(key: String): String? {
@@ -441,7 +448,7 @@ class MobileStateDb(context: Context) :
             """
             SELECT relative_path, remote_file_id, local_uri, local_size, local_mtime_ms, local_hash,
                    remote_size, remote_modified_at, remote_md5, last_action, deleted_on_remote,
-                   kept_local_hash, kept_local_mtime_ms, ignored_local_delete
+                   kept_local_hash, kept_local_mtime_ms, ignored_local_delete, author_email, author_name
             FROM synced_files WHERE folder_id = ?
             """.trimIndent(),
             arrayOf(folderId)
@@ -463,7 +470,9 @@ class MobileStateDb(context: Context) :
                     deletedOnRemote = c.getInt(10) != 0,
                     keptLocalHash = c.getString(11),
                     keptLocalMtimeMs = c.getLong(12),
-                    ignoredLocalDelete = c.getInt(13) != 0
+                    ignoredLocalDelete = c.getInt(13) != 0,
+                    authorEmail = c.getString(14),
+                    authorName = c.getString(15)
                 )
             }
         }
@@ -488,6 +497,8 @@ class MobileStateDb(context: Context) :
             put("kept_local_hash", row.keptLocalHash)
             put("kept_local_mtime_ms", row.keptLocalMtimeMs)
             put("ignored_local_delete", if (row.ignoredLocalDelete) 1 else 0)
+            put("author_email", row.authorEmail)
+            put("author_name", row.authorName)
         }
         writableDatabase.insertWithOnConflict("synced_files", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
     }
@@ -598,6 +609,8 @@ class MobileStateDb(context: Context) :
     fun updateRuntime(state: FolderRuntimeState) {
         liveRuntime[state.folderId] = state
     }
+
+    fun getRuntime(folderId: String): FolderRuntimeState? = liveRuntime[folderId]
 
     @Synchronized
     fun buildRuntimeState(folder: SyncFolderConfig): FolderRuntimeState {

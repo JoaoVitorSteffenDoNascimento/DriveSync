@@ -170,6 +170,9 @@ function makeMockBridge(snap: MobileSnapshot): DriveSyncNativePlugin {
           sizeBytes: 256000,
           modifiedAt: '2026-11-17T11:59:00Z',
           exceeds4gb: false,
+          syncStatus: 'sending',
+          senderName: 'João',
+          senderEmail: 'joao@gmail.com',
         },
       ],
     }),
@@ -261,6 +264,8 @@ describe('MobileApp', () => {
     await act(async () => {});
     expect(bridge.listFolderContents).toHaveBeenCalledWith({ folderId: 'folder-1', subpath: '' });
     expect(container.textContent).toContain('contrato.pdf');
+    expect(container.textContent).toContain('Enviando agora...');
+    expect(container.textContent).toContain('Enviado por: João');
     const addFolderBtn = findButton(container, 'Adicionar Pasta');
     await act(async () => {
       addFolderBtn?.click();

@@ -63,6 +63,7 @@ export const ActivityPage: React.FC<Props> = ({ snapshot, initialTab = 'activity
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     Pasta: {ev.folderName}
                     {ev.fileSizeBytes ? ` • ${formatBytes(ev.fileSizeBytes)}` : ''}
+                    {ev.authorEmail ? ` • Enviado por: ${ev.authorEmail}` : ''}
                   </div>
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>

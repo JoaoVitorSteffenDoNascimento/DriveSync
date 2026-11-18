@@ -381,8 +381,10 @@ export const FoldersPage: React.FC<Props> = ({
                 </div>
                 {rt.currentFile && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    {rt.currentAction === 'download' ? 'Baixando: ' : 'Enviando: '}
                     {rt.currentFile}
                     {rt.bytesTotal ? ` (${formatBytes(rt.bytesTransferred ?? 0)} / ${formatBytes(rt.bytesTotal)})` : ''}
+                    {` • Enviado por: ${rt.currentAuthor || snapshot.account.displayName || snapshot.account.email || 'Você'}`}
                   </div>
                 )}
               </div>

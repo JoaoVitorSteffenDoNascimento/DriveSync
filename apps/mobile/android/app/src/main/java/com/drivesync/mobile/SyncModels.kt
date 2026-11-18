@@ -249,6 +249,8 @@ data class FolderRuntimeState(
     val message: String,
     val lastSyncAt: String = "",
     val currentFile: String = "",
+    val currentAction: String = "",
+    val currentAuthor: String = "",
     val progressPercent: Int = 0,
     val bytesTransferred: Long = 0,
     val bytesTotal: Long = 0,
@@ -263,6 +265,8 @@ data class FolderRuntimeState(
         put("message", message)
         if (lastSyncAt.isNotBlank()) put("lastSyncAt", lastSyncAt)
         if (currentFile.isNotBlank()) put("currentFile", currentFile)
+        if (currentAction.isNotBlank()) put("currentAction", currentAction)
+        if (currentAuthor.isNotBlank()) put("currentAuthor", currentAuthor)
         if (progressPercent > 0) put("progressPercent", progressPercent)
         if (bytesTransferred > 0) put("bytesTransferred", bytesTransferred)
         if (bytesTotal > 0) put("bytesTotal", bytesTotal)
@@ -467,7 +471,9 @@ data class SyncedFileRow(
     val deletedOnRemote: Boolean = false,
     val keptLocalHash: String = "",
     val keptLocalMtimeMs: Long = 0L,
-    val ignoredLocalDelete: Boolean = false
+    val ignoredLocalDelete: Boolean = false,
+    val authorEmail: String = "",
+    val authorName: String = ""
 )
 
 object SyncRules {

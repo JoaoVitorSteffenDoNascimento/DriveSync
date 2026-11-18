@@ -1,6 +1,6 @@
 {
   "name": "@drivesync/mobile",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "DriveSync Mobile (Android/iOS) com Storage Access Framework, WorkManager, Drive Master e trava de 4 GB",
   "scripts": {

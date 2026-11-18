@@ -78,6 +78,9 @@ export interface FolderContentItem {
   sizeBytes: number;
   modifiedAt: string;
   exceeds4gb: boolean;
+  syncStatus?: 'synced' | 'sending' | 'pending' | 'blocked_4gb' | 'local_only';
+  senderName?: string;
+  senderEmail?: string;
 }
 
 export interface FolderContentsResponse {
@@ -102,6 +105,8 @@ export interface FolderRuntimeState {
   message: string;
   lastSyncAt?: string;
   currentFile?: string;
+  currentAction?: 'upload' | 'download';
+  currentAuthor?: string;
   progressPercent?: number;
   bytesTransferred?: number;
   bytesTotal?: number;

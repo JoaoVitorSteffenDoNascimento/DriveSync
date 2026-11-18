@@ -27,6 +27,9 @@ function createMockClient(snapshot: DaemonSnapshot): DaemonClient {
           sizeBytes: 1024,
           modifiedAt: '2026-11-17T12:00:00Z',
           exceeds4gb: false,
+          syncStatus: 'sending',
+          senderName: 'João',
+          senderEmail: 'joao@gmail.com',
         },
       ],
     }),
@@ -176,6 +179,8 @@ describe('App UI DriveSync', () => {
     });
     expect(container.textContent).toContain('Adicionar Arquivos');
     expect(container.textContent).toContain('relatorio.pdf');
+    expect(container.textContent).toContain('Enviando agora...');
+    expect(container.textContent).toContain('Enviado por: João');
 
     const closeModalBtn = container.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]');
     await act(async () => {

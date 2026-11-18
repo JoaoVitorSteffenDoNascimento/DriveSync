@@ -259,31 +259,57 @@ export const FolderBrowserModal: React.FC<Props> = ({
               Esta pasta ainda está vazia. Adicione ou arraste arquivos acima.
             </div>
           ) : (
-            contents.items.map((item) => (
-              <div
-                key={item.relativePath}
-                className="drive-row"
-                style={{ cursor: item.isDir ? 'pointer' : 'default' }}
-                onClick={() => {
-                  if (item.isDir) setSubpath(item.relativePath);
-                }}
-              >
-                <span className="row-inline">
-                  {item.isDir ? (
-                    <Folder size={16} color="var(--primary)" />
-                  ) : (
-                    <File size={16} color="var(--text-muted)" />
-                  )}
-                  <span>{item.name}</span>
-                  {item.exceeds4gb && (
-                    <span className="badge badge-warning">Acima de 4 GB (não sobe)</span>
-                  )}
-                </span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {item.isDir ? 'Pasta' : formatBytes(item.sizeBytes)}
-                </span>
-              </div>
-            ))
+            contents.items.map((item) => {
+              const statusBadge = item.exceeds4gb
+                ? { cls: 'badge badge-warning', label: 'Acima de 4 GB (não sobe)' }
+                : item.syncStatus
+                  ? {
+                      sending: { cls: 'badge badge-syncing', label: 'Enviando agora...' },
+                      pending: { cls: 'badge badge-muted', label: 'Na fila de envio' },
+                      synced: { cls: 'badge badge-ok', label: 'Sincronizado' },
+                      blocked_4gb: { cls: 'badge badge-warning', label: 'Acima de 4 GB (não sobe)' },
+                      local_only: { cls: 'badge badge-muted', label: 'Somente neste aparelho' },
+                    }[item.syncStatus]
+                  : undefined;
+              const senderLabel =
+                item.senderName ||
+                item.senderEmail ||
+                (item.syncStatus && item.syncStatus !== 'blocked_4gb' && item.syncStatus !== 'local_only'
+                  ? 'Você'
+                  : '');
+              return (
+                <div
+                  key={item.relativePath}
+                  className="drive-row"
+                  style={{ cursor: item.isDir ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (item.isDir) setSubpath(item.relativePath);
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                    <span className="row-inline">
+                      {item.isDir ? (
+                        <Folder size={16} color="var(--primary)" />
+                      ) : (
+                        <File size={16} color="var(--text-muted)" />
+                      )}
+                      <span>{item.name}</span>
+                      {!item.isDir && statusBadge && (
+                        <span className={statusBadge.cls}>{statusBadge.label}</span>
+                      )}
+                    </span>
+                    {!item.isDir && senderLabel && (
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2, paddingLeft: 24 }}>
+                        Enviado por: {senderLabel}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {item.isDir ? 'Pasta' : formatBytes(item.sizeBytes)}
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
       </div>

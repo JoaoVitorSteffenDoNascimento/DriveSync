@@ -8,7 +8,7 @@ const (
 
 	ControlDirName    = ".drivesync"
 	QuarantineDirName = ".DriveSync-Quarentena"
-	AppVersion        = "0.3.0"
+	AppVersion        = "0.4.0"
 )
 
 type FolderKind string
@@ -115,6 +115,9 @@ type FolderContentItem struct {
 	SizeBytes    int64  `json:"sizeBytes"`
 	ModifiedAt   string `json:"modifiedAt"`
 	Exceeds4GB   bool   `json:"exceeds4gb"`
+	SyncStatus   string `json:"syncStatus,omitempty"`
+	SenderName   string `json:"senderName,omitempty"`
+	SenderEmail  string `json:"senderEmail,omitempty"`
 }
 
 type FolderContentsResponse struct {
@@ -149,6 +152,8 @@ type FolderRuntimeState struct {
 	Message            string  `json:"message"`
 	LastSyncAt         string  `json:"lastSyncAt,omitempty"`
 	CurrentFile        string  `json:"currentFile,omitempty"`
+	CurrentAction      string  `json:"currentAction,omitempty"`
+	CurrentAuthor      string  `json:"currentAuthor,omitempty"`
 	ProgressPercent    float64 `json:"progressPercent,omitempty"`
 	BytesTransferred   int64   `json:"bytesTransferred,omitempty"`
 	BytesTotal         int64   `json:"bytesTotal,omitempty"`
@@ -156,6 +161,15 @@ type FolderRuntimeState struct {
 	IgnoredSenderCount int     `json:"ignoredSenderCount"`
 	KeptLocalCount     int     `json:"keptLocalCount"`
 	SyncedFilesCount   int     `json:"syncedFilesCount"`
+}
+
+func FirstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 type DeviceRegistration struct {

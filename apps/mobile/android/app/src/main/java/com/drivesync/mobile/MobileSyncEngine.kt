@@ -247,6 +247,10 @@ class MobileSyncEngine(
         val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
+        val baseline = db.listSyncedFiles(folder.id)
+        val rt = db.getRuntime(folder.id)
+        val account = db.getAccountInfo()
+        val defaultSenderName = account.displayName.ifBlank { account.email }
         val items = current.listFiles()
             .mapNotNull { child ->
                 val name = child.name ?: return@mapNotNull null
@@ -255,6 +259,39 @@ class MobileSyncEngine(
                 val isDir = child.isDirectory
                 val size = if (isDir) 0L else queryUriSize(child.uri, child.length())
                 val mtime = child.lastModified()
+                var syncStatus = ""
+                var senderName = ""
+                var senderEmail = ""
+                if (!isDir) {
+                    val syncedRow = baseline[rel]
+                    when {
+                        SyncRules.exceedsUploadLimit(size) -> {
+                            syncStatus = "blocked_4gb"
+                            senderName = defaultSenderName
+                            senderEmail = account.email
+                        }
+                        rt?.status == "syncing" && rt.currentFile == rel -> {
+                            syncStatus = "sending"
+                            senderName = rt.currentAuthor.ifBlank { defaultSenderName }
+                            senderEmail = account.email
+                        }
+                        syncedRow != null && !syncedRow.deletedOnRemote -> {
+                            syncStatus = "synced"
+                            senderName = syncedRow.authorName.ifBlank { syncedRow.authorEmail.ifBlank { defaultSenderName } }
+                            senderEmail = syncedRow.authorEmail.ifBlank { account.email }
+                        }
+                        folder.direction == "receive_only" -> {
+                            syncStatus = "local_only"
+                            senderName = defaultSenderName
+                            senderEmail = account.email
+                        }
+                        else -> {
+                            syncStatus = "pending"
+                            senderName = defaultSenderName
+                            senderEmail = account.email
+                        }
+                    }
+                }
                 Triple(isDir, name.lowercase(Locale.US), JSONObject().apply {
                     put("name", name)
                     put("relativePath", rel)
@@ -262,6 +299,9 @@ class MobileSyncEngine(
                     put("sizeBytes", size)
                     put("modifiedAt", if (mtime > 0) isoFmt.format(Date(mtime)) else "")
                     put("exceeds4gb", !isDir && SyncRules.exceedsUploadLimit(size))
+                    if (syncStatus.isNotBlank()) put("syncStatus", syncStatus)
+                    if (senderName.isNotBlank()) put("senderName", senderName)
+                    if (senderEmail.isNotBlank()) put("senderEmail", senderEmail)
                 })
             }
             .sortedWith(compareBy<Triple<Boolean, String, JSONObject>>({ !it.first }, { it.second }))
@@ -399,7 +439,9 @@ class MobileSyncEngine(
                                 remoteSize = rf.sizeBytes,
                                 remoteModifiedAt = rf.modifiedTime,
                                 remoteMd5 = rf.md5Checksum,
-                                lastAction = "synced"
+                                lastAction = "synced",
+                                authorEmail = rf.authorEmail.ifBlank { prev?.authorEmail ?: account.email },
+                                authorName = rf.authorName.ifBlank { prev?.authorName ?: account.displayName }
                             )
                         )
                         continue
@@ -650,11 +692,14 @@ class MobileSyncEngine(
     ) {
         val segments = rf.relativePath.split('/').filter { it.isNotBlank() }
         if (segments.isEmpty()) return
+        val senderLabel = rf.authorName.ifBlank { rf.authorEmail.ifBlank { "Google Drive" } }
         db.updateRuntime(
             db.buildRuntimeState(folder).copy(
                 status = "syncing",
                 message = "Baixando ${rf.relativePath}",
                 currentFile = rf.relativePath,
+                currentAction = "download",
+                currentAuthor = senderLabel,
                 bytesTotal = rf.sizeBytes
             )
         )
@@ -678,7 +723,9 @@ class MobileSyncEngine(
                 remoteSize = rf.sizeBytes,
                 remoteModifiedAt = rf.modifiedTime,
                 remoteMd5 = rf.md5Checksum,
-                lastAction = "download"
+                lastAction = "download",
+                authorEmail = rf.authorEmail,
+                authorName = rf.authorName
             )
         )
         db.recordActivity(
@@ -719,11 +766,14 @@ class MobileSyncEngine(
                 senderName = account.displayName
             ) { sent, total ->
                 val pct = if (total > 0) ((sent * 100L) / total).toInt().coerceIn(0, 100) else 100
+                val senderLabel = account.displayName.ifBlank { account.email }
                 db.updateRuntime(
                     db.buildRuntimeState(folder).copy(
                         status = "syncing",
                         message = "Enviando ${local.relativePath} ($pct%)",
                         currentFile = local.relativePath,
+                        currentAction = "upload",
+                        currentAuthor = senderLabel,
                         progressPercent = pct,
                         bytesTransferred = sent,
                         bytesTotal = total
@@ -744,7 +794,9 @@ class MobileSyncEngine(
                 remoteSize = uploaded.sizeBytes,
                 remoteModifiedAt = uploaded.modifiedTime,
                 remoteMd5 = uploaded.md5Checksum,
-                lastAction = "upload"
+                lastAction = "upload",
+                authorEmail = account.email,
+                authorName = account.displayName
             )
         )
         db.recordActivity(

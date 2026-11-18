@@ -2,6 +2,21 @@
 
 Todas as alterações relevantes do **DriveSync** são documentadas neste arquivo seguindo os padrões [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e [Semantic Versioning 2.0.0](https://semver.org/lang/pt-BR/).
 
+## [0.4.0] - 2026-11-18
+
+### Adicionado
+- **Status de envio e identificação do remetente por arquivo (Desktop e Android)**:
+  - Barra de progresso nos cards de pasta mostra a ação atual (`Enviando:` / `Baixando:`) e o remetente responsável (`Enviado por:`).
+  - Modal/sheet **Abrir pasta** exibe selos individuais por arquivo (`Enviando agora...`, `Na fila de envio`, `Sincronizado`, `Somente neste aparelho`, `Acima de 4 GB (não sobe)`) acompanhados de `Enviado por: <nome/e-mail>`.
+  - Aba **Atividade** passa a exibir `• Enviado por:` nos eventos recentes com autoria registrada.
+  - Banco local Android atualizado para versão `2` com colunas `author_email` e `author_name` em `synced_files`.
+
+### Corrigido
+- **Layout, diagramas e caixas de download no site institucional (`docs/`)**:
+  - Diagramas SVG de largura fixa substituídos por diagramas responsivos em HTML/CSS Grid/Flexbox sem textos cortados e sem barras de rolagem horizontais.
+  - Quatro caixas de destaque no hero ampliadas para largura total com tipografia mais legível.
+  - Links secundários nos cartões de download (`.msi`, `.deb`, `.rpm`, `.pacman` e `Copiar link para abrir no celular`) reorganizados em barra discreta e simétrica com separadores limpos.
+
 ## [0.3.0] - 2026-11-17
 
 ### Melhorado

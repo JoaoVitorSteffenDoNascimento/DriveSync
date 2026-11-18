@@ -493,12 +493,19 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                   {rt?.status === 'syncing' && (
                     <div style={{ marginBottom: 10 }}>
                       <div className="row-between" style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
-                        <span>{rt.currentFile || 'Processando arquivos...'}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '68%' }}>
+                          {rt.currentFile
+                            ? `${rt.currentAction === 'download' ? 'Baixando: ' : 'Enviando: '}${rt.currentFile}`
+                            : 'Processando arquivos...'}
+                        </span>
                         <span>
                           {rt.bytesTotal
                             ? `${formatBytes(rt.bytesTransferred ?? 0)} / ${formatBytes(rt.bytesTotal)}`
                             : `${pct}%`}
                         </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, marginBottom: 4 }}>
+                        Enviado por: {rt.currentAuthor || snap.account.displayName || snap.account.email || 'Você'}
                       </div>
                       <div className="progress-track">
                         <div className="progress-fill" style={{ width: `${Math.max(8, pct)}%` }} />
@@ -1013,6 +1020,7 @@ const MobileActivityTab: React.FC<{
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     Pasta: {ev.folderName}
                     {ev.fileSizeBytes ? ` • ${formatBytes(ev.fileSizeBytes)}` : ''}
+                    {ev.authorEmail ? ` • Enviado por: ${ev.authorEmail}` : ''}
                   </div>
                 </div>
                 <span style={{ fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>

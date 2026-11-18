@@ -28,8 +28,8 @@ android {
         applicationId "com.drivesync.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 300
-        versionName "0.3.0"
+        versionCode 400
+        versionName "0.4.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "DEFAULT_GOOGLE_CLIENT_ID", "\"${resolveGoogleEnv('DRIVESYNC_GOOGLE_CLIENT_ID')}\""
         buildConfigField "String", "DEFAULT_GOOGLE_CLIENT_SECRET", "\"${resolveGoogleEnv('DRIVESYNC_GOOGLE_CLIENT_SECRET')}\""

@@ -658,12 +658,15 @@ func (s *Syncer) SyncFolder(ctx context.Context, folderID string) error {
 
 func (s *Syncer) downloadEntry(ctx context.Context, driveAPI drive.API, folder config.SyncFolderConfig, rem drive.RemoteEntry) error {
 	dest := filepath.Join(folder.LocalPath, filepath.FromSlash(rem.RelativePath))
+	authorLabel := config.FirstNonEmpty(rem.AuthorName, rem.AuthorEmail, "Google Drive")
 	s.setRuntime(config.FolderRuntimeState{
-		FolderID:    folder.ID,
-		Status:      "syncing",
-		Message:     fmt.Sprintf("Baixando %s", rem.Name),
-		CurrentFile: rem.RelativePath,
-		BytesTotal:  rem.Size,
+		FolderID:      folder.ID,
+		Status:        "syncing",
+		Message:       fmt.Sprintf("Baixando %s", rem.Name),
+		CurrentFile:   rem.RelativePath,
+		CurrentAction: "download",
+		CurrentAuthor: authorLabel,
+		BytesTotal:    rem.Size,
 	})
 
 	md5Hex, err := driveAPI.DownloadFile(ctx, rem.ID, dest, rem.Size, func(done, total int64) {
@@ -676,6 +679,8 @@ func (s *Syncer) downloadEntry(ctx context.Context, driveAPI drive.API, folder c
 			Status:           "syncing",
 			Message:          fmt.Sprintf("Baixando %s", rem.Name),
 			CurrentFile:      rem.RelativePath,
+			CurrentAction:    "download",
+			CurrentAuthor:    authorLabel,
 			ProgressPercent:  pct,
 			BytesTransferred: done,
 			BytesTotal:       total,
@@ -752,12 +757,15 @@ func (s *Syncer) uploadEntry(
 	}
 
 	baseName := path.Base(loc.RelPath)
+	authorLabel := config.FirstNonEmpty(account.DisplayName, account.Email, settings.DeviceName)
 	s.setRuntime(config.FolderRuntimeState{
-		FolderID:    folder.ID,
-		Status:      "syncing",
-		Message:     fmt.Sprintf("Enviando %s", baseName),
-		CurrentFile: loc.RelPath,
-		BytesTotal:  loc.Size,
+		FolderID:      folder.ID,
+		Status:        "syncing",
+		Message:       fmt.Sprintf("Enviando %s", baseName),
+		CurrentFile:   loc.RelPath,
+		CurrentAction: "upload",
+		CurrentAuthor: authorLabel,
+		BytesTotal:    loc.Size,
 	})
 
 	locHash, _ := fileMD5(loc.AbsPath)
@@ -781,6 +789,8 @@ func (s *Syncer) uploadEntry(
 				Status:           "syncing",
 				Message:          fmt.Sprintf("Enviando %s", baseName),
 				CurrentFile:      loc.RelPath,
+				CurrentAction:    "upload",
+				CurrentAuthor:    authorLabel,
 				ProgressPercent:  pct,
 				BytesTransferred: done,
 				BytesTotal:       total,
