@@ -1,5 +1,13 @@
 /** Versão oficial sincronizada em todo o monorepo (SemVer 2.0.0). */
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.5.0';
+
+/** Repositório e endpoints oficiais para verificação e download de atualizações. */
+export const GITHUB_REPO_OWNER = 'JoaoVitorSteffenDoNascimento';
+export const GITHUB_REPO_NAME = 'DriveSync';
+export const GITHUB_RELEASES_LATEST_API = `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`;
+export const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`;
+export const GITHUB_LATEST_DOWNLOAD_BASE = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest/download`;
+export const DOWNLOAD_SITE_URL = 'https://joaovitorsteffendonascimento.github.io/DriveSync/';
 
 /**
  * Calcula o versionCode inteiro exigido pelo Android / Google Play Store

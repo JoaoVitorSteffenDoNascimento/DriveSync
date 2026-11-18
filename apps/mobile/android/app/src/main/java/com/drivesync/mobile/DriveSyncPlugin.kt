@@ -1,11 +1,23 @@
 package com.drivesync.mobile
 
+import android.Manifest
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Base64
 import androidx.activity.result.ActivityResult
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -17,14 +29,22 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.net.URL
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.Executors
 
 @CapacitorPlugin(name = "DriveSyncNative")
@@ -1039,6 +1059,280 @@ class DriveSyncPlugin : Plugin() {
                 toJSObject(saved.toJson())
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Erro ao salvar configurações.") }
+        }
+    }
+
+    @PluginMethod
+    fun checkForAppUpdate(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val prefs = context.getSharedPreferences(UPDATE_PREFS_NAME, Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("asked_notif_perm", false)) {
+                prefs.edit().putBoolean("asked_notif_perm", true).apply()
+                activity?.let { act ->
+                    act.runOnUiThread {
+                        runCatching {
+                            ActivityCompat.requestPermissions(
+                                act,
+                                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                                4102
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        executor.execute {
+            runCatching {
+                val res = checkGitHubLatestRelease()
+                if (res.optBoolean("hasUpdate", false)) {
+                    postUpdateNotificationIfNeeded(context, res.optString("latestVersion", ""))
+                }
+                toJSObject(res)
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Não foi possível verificar atualizações.") }
+        }
+    }
+
+    @PluginMethod
+    fun downloadAndInstallUpdate(call: PluginCall) {
+        val rawUrl = call.getString("downloadUrl", "")?.trim().orEmpty()
+        val targetUrl = if (rawUrl.startsWith("https://")) rawUrl else LATEST_APK_DOWNLOAD_URL
+
+        executor.execute {
+            runCatching {
+                val updatesDir = File(context.cacheDir, "updates").apply { mkdirs() }
+                val apkFile = File(updatesDir, "DriveSync-update.apk")
+                downloadFileWithRedirects(targetUrl, apkFile)
+
+                val apkUri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    apkFile
+                )
+                val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                val launcher: (Intent) -> Unit = { intent ->
+                    val act = activity
+                    if (act != null) {
+                        act.runOnUiThread { act.startActivity(intent) }
+                    } else {
+                        context.startActivity(intent)
+                    }
+                }
+
+                runCatching {
+                    launcher(installIntent)
+                }.onFailure {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                        !context.packageManager.canRequestPackageInstalls()
+                    ) {
+                        val permIntent = Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:${context.packageName}")
+                        ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                        launcher(permIntent)
+                    } else {
+                        launcher(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        )
+                    }
+                }
+
+                JSObject().apply {
+                    put("started", true)
+                    put("mode", "apk_installer")
+                }
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Falha ao baixar atualização.") }
+        }
+    }
+
+    private fun downloadFileWithRedirects(initialUrl: String, destFile: File) {
+        var currentUrl = initialUrl
+        for (hop in 0 until 6) {
+            val conn = (URL(currentUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                instanceFollowRedirects = false
+                connectTimeout = 15_000
+                readTimeout = 60_000
+                setRequestProperty("User-Agent", "DriveSync-Android/${BuildConfig.VERSION_NAME}")
+            }
+            try {
+                val code = conn.responseCode
+                if (code in listOf(301, 302, 303, 307, 308)) {
+                    val location = conn.getHeaderField("Location").orEmpty()
+                    if (location.isBlank()) {
+                        throw IllegalStateException("Redirecionamento vazio ($code) ao baixar APK.")
+                    }
+                    currentUrl = URL(URL(currentUrl), location).toString()
+                    continue
+                }
+                if (code !in 200..299) {
+                    throw IllegalStateException("Servidor retornou HTTP $code ao baixar atualização.")
+                }
+                val tempFile = File(destFile.parentFile, "${destFile.name}.tmp")
+                conn.inputStream.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        val buffer = ByteArray(16 * 1024)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                        }
+                    }
+                }
+                if (destFile.exists()) destFile.delete()
+                if (!tempFile.renameTo(destFile)) {
+                    tempFile.copyTo(destFile, overwrite = true)
+                    tempFile.delete()
+                }
+                return
+            } finally {
+                conn.disconnect()
+            }
+        }
+        throw IllegalStateException("Excesso de redirecionamentos ao baixar APK.")
+    }
+
+    companion object {
+        private const val UPDATE_PREFS_NAME = "drivesync_update_prefs"
+        private const val UPDATE_CHANNEL_ID = "drivesync_updates"
+        private const val LATEST_RELEASE_API_URL =
+            "https://api.github.com/repos/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest"
+        private const val LATEST_RELEASES_PAGE_URL =
+            "https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest"
+        private const val LATEST_APK_DOWNLOAD_URL =
+            "https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk"
+
+        private fun normalizeSemVer(raw: String?): String {
+            val cleaned = raw.orEmpty().trim().removePrefix("v").removePrefix("V")
+            val match = Regex("^(\\d+)\\.(\\d+)\\.(\\d+)").find(cleaned) ?: return ""
+            return "${match.groupValues[1].toInt()}.${match.groupValues[2].toInt()}.${match.groupValues[3].toInt()}"
+        }
+
+        private fun parseSemVerCode(raw: String): Int {
+            val norm = normalizeSemVer(raw)
+            if (norm.isBlank()) return 0
+            val parts = norm.split('.')
+            return parts[0].toInt() * 10000 + parts[1].toInt() * 100 + parts[2].toInt()
+        }
+
+        fun checkGitHubLatestRelease(): JSONObject {
+            val conn = (URL(LATEST_RELEASE_API_URL).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10_000
+                readTimeout = 12_000
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "DriveSync-Android/${BuildConfig.VERSION_NAME}")
+            }
+            try {
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val bodyText = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
+                if (code !in 200..299) {
+                    throw IllegalStateException("GitHub Releases retornou HTTP $code.")
+                }
+                val payload = JSONObject(bodyText)
+                val currentVersion = normalizeSemVer(BuildConfig.VERSION_NAME).ifBlank { BuildConfig.VERSION_NAME }
+                val latestVersion = normalizeSemVer(payload.optString("tag_name", "")).ifBlank { currentVersion }
+                val hasUpdate = parseSemVerCode(latestVersion) > parseSemVerCode(currentVersion)
+
+                var assetName = "DriveSync-Android.apk"
+                var downloadUrl = LATEST_APK_DOWNLOAD_URL
+                var assetSizeBytes = 0L
+                val assets = payload.optJSONArray("assets") ?: JSONArray()
+                for (i in 0 until assets.length()) {
+                    val item = assets.optJSONObject(i) ?: continue
+                    val name = item.optString("name", "")
+                    if (name.endsWith(".apk", ignoreCase = true)) {
+                        assetName = name
+                        downloadUrl = item.optString("browser_download_url", LATEST_APK_DOWNLOAD_URL)
+                        assetSizeBytes = item.optLong("size", 0L)
+                        break
+                    }
+                }
+
+                val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+
+                return JSONObject().apply {
+                    put("currentVersion", currentVersion)
+                    put("latestVersion", latestVersion)
+                    put("hasUpdate", hasUpdate)
+                    put("releaseUrl", payload.optString("html_url", LATEST_RELEASES_PAGE_URL))
+                    put("downloadUrl", downloadUrl)
+                    put("assetName", assetName)
+                    if (assetSizeBytes > 0L) put("assetSizeBytes", assetSizeBytes)
+                    put("releaseNotes", payload.optString("body", ""))
+                    put("publishedAt", payload.optString("published_at", ""))
+                    put("checkedAt", isoFmt.format(Date()))
+                }
+            } finally {
+                conn.disconnect()
+            }
+        }
+
+        fun postUpdateNotificationIfNeeded(context: Context, latestVersion: String) {
+            val clean = normalizeSemVer(latestVersion)
+            if (clean.isBlank()) return
+
+            val prefs = context.getSharedPreferences(UPDATE_PREFS_NAME, Context.MODE_PRIVATE)
+            if (prefs.getString("notified_version", "") == clean) return
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return
+            }
+
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    UPDATE_CHANNEL_ID,
+                    "Atualizações do DriveSync",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Avisa quando uma nova versão do DriveSync está pronta para instalar."
+                }
+                nm.createNotificationChannel(channel)
+            }
+
+            val openIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            val piFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            val pendingIntent = PendingIntent.getActivity(context, 4100, openIntent, piFlags)
+
+            val smallIcon = if (context.applicationInfo.icon != 0) {
+                context.applicationInfo.icon
+            } else {
+                android.R.drawable.stat_sys_download_done
+            }
+
+            val notification = NotificationCompat.Builder(context, UPDATE_CHANNEL_ID)
+                .setSmallIcon(smallIcon)
+                .setContentTitle("DriveSync v$clean disponível")
+                .setContentText("Toque para abrir o app e atualizar em 1 clique.")
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .build()
+
+            nm.notify(4100, notification)
+            prefs.edit().putString("notified_version", clean).apply()
         }
     }
 

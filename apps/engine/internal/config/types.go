@@ -8,7 +8,7 @@ const (
 
 	ControlDirName    = ".drivesync"
 	QuarantineDirName = ".DriveSync-Quarentena"
-	AppVersion        = "0.4.0"
+	AppVersion        = "0.5.0"
 )
 
 type FolderKind string

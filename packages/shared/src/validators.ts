@@ -1,5 +1,15 @@
-import { MAX_UPLOAD_BYTES } from './constants.js';
-import type { CreateFolderInput, SenderPolicy } from './types.js';
+import {
+  GITHUB_LATEST_DOWNLOAD_BASE,
+  GITHUB_RELEASES_URL,
+  MAX_UPLOAD_BYTES,
+  computeAndroidVersionCode,
+} from './constants.js';
+import type {
+  AppUpdateCheckResult,
+  AppUpdatePlatform,
+  CreateFolderInput,
+  SenderPolicy,
+} from './types.js';
 
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '0 B';
@@ -164,4 +174,96 @@ export function formatStoragePath(rawPath: string | undefined | null): string {
     return `~${winHome[1] || ''}`;
   }
   return input;
+}
+
+const PLATFORM_DEFAULT_INSTALLERS: Record<
+  AppUpdatePlatform,
+  { extPattern: RegExp; fallbackName: string }
+> = {
+  android: { extPattern: /\.apk$/i, fallbackName: 'DriveSync-Android.apk' },
+  windows: { extPattern: /\.exe$/i, fallbackName: 'DriveSync-Setup-Windows-x64.exe' },
+  linux: { extPattern: /\.AppImage$/i, fallbackName: 'DriveSync-Linux-x64.AppImage' },
+};
+
+/** Normaliza uma string de versão para o formato SemVer `MAJOR.MINOR.PATCH`. */
+export function normalizeSemVer(raw: string | undefined | null): string {
+  const cleaned = String(raw ?? '')
+    .trim()
+    .replace(/^[vV]/, '');
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(cleaned);
+  return match ? `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}` : '';
+}
+
+/** Compara duas versões SemVer (`> 0` se `a > b`, `0` se iguais, `< 0` se `a < b`). */
+export function compareSemVer(a: string, b: string): number {
+  const normA = normalizeSemVer(a);
+  const normB = normalizeSemVer(b);
+  if (!normA || !normB) return 0;
+  return computeAndroidVersionCode(normA) - computeAndroidVersionCode(normB);
+}
+
+/** Retorna true quando `remoteVersion` é estritamente mais nova que `currentVersion`. */
+export function isNewerVersionAvailable(currentVersion: string, remoteVersion: string): boolean {
+  const cur = normalizeSemVer(currentVersion);
+  const rem = normalizeSemVer(remoteVersion);
+  if (!cur || !rem) return false;
+  return compareSemVer(rem, cur) > 0;
+}
+
+interface GitHubReleaseAssetLike {
+  name?: unknown;
+  browser_download_url?: unknown;
+  size?: unknown;
+}
+
+interface GitHubReleasePayloadLike {
+  tag_name?: unknown;
+  html_url?: unknown;
+  body?: unknown;
+  published_at?: unknown;
+  assets?: unknown;
+}
+
+/** Interpreta a resposta JSON de `/releases/latest` para a plataforma alvo. */
+export function parseGitHubReleaseForPlatform(
+  releasePayload: unknown,
+  currentVersion: string,
+  platform: AppUpdatePlatform,
+): AppUpdateCheckResult {
+  const payload =
+    releasePayload && typeof releasePayload === 'object'
+      ? (releasePayload as GitHubReleasePayloadLike)
+      : {};
+  const normalizedCurrent = normalizeSemVer(currentVersion) || String(currentVersion).trim();
+  const latestVersion = normalizeSemVer(typeof payload.tag_name === 'string' ? payload.tag_name : '');
+  const spec = PLATFORM_DEFAULT_INSTALLERS[platform];
+  const assets = Array.isArray(payload.assets) ? (payload.assets as GitHubReleaseAssetLike[]) : [];
+  const matchedAsset = assets.find(
+    (item) => typeof item?.name === 'string' && spec.extPattern.test(item.name),
+  );
+
+  const assetName =
+    typeof matchedAsset?.name === 'string' && matchedAsset.name
+      ? matchedAsset.name
+      : spec.fallbackName;
+  const downloadUrl =
+    typeof matchedAsset?.browser_download_url === 'string' && matchedAsset.browser_download_url
+      ? matchedAsset.browser_download_url
+      : `${GITHUB_LATEST_DOWNLOAD_BASE}/${assetName}`;
+  const assetSizeBytes =
+    typeof matchedAsset?.size === 'number' && matchedAsset.size > 0 ? matchedAsset.size : undefined;
+
+  return {
+    currentVersion: normalizedCurrent,
+    latestVersion: latestVersion || normalizedCurrent,
+    hasUpdate: latestVersion ? isNewerVersionAvailable(normalizedCurrent, latestVersion) : false,
+    releaseUrl:
+      typeof payload.html_url === 'string' && payload.html_url ? payload.html_url : GITHUB_RELEASES_URL,
+    downloadUrl,
+    assetName,
+    assetSizeBytes,
+    releaseNotes: typeof payload.body === 'string' ? payload.body : undefined,
+    publishedAt: typeof payload.published_at === 'string' ? payload.published_at : undefined,
+    checkedAt: new Date().toISOString(),
+  };
 }

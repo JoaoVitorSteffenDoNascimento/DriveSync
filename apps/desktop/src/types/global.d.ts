@@ -1,3 +1,5 @@
+import type { AppUpdateCheckResult } from '@drivesync/shared';
+
 export interface DaemonConnectionInfo {
   baseUrl: string;
   wsUrl: string;
@@ -14,6 +16,9 @@ export interface DesktopBridge {
   openPathInExplorer: (targetPath: string) => Promise<void>;
   setAutoStart: (enabled: boolean) => Promise<void>;
   getPlatformInfo: () => { platform: string; arch: string };
+  checkForUpdates: (notifyOs?: boolean) => Promise<AppUpdateCheckResult>;
+  installUpdate: (downloadUrl?: string) => Promise<{ started: boolean; mode: string; detail: string }>;
+  onUpdateAvailable: (listener: (info: AppUpdateCheckResult) => void) => () => void;
 }
 
 declare global {

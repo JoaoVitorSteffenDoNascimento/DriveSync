@@ -201,6 +201,16 @@ function makeMockBridge(snap: MobileSnapshot): DriveSyncNativePlugin {
     forgetDevice: vi.fn().mockResolvedValue({ ok: true }),
     syncNow: vi.fn().mockResolvedValue({ started: true }),
     updateSettings: vi.fn().mockResolvedValue(snap.settings),
+    checkForAppUpdate: vi.fn().mockResolvedValue({
+      currentVersion: '0.4.0',
+      latestVersion: '0.4.0',
+      hasUpdate: false,
+      releaseUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest',
+      downloadUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk',
+      assetName: 'DriveSync-Android.apk',
+      checkedAt: '2026-11-18T00:00:00Z',
+    }),
+    downloadAndInstallUpdate: vi.fn().mockResolvedValue({ started: true, mode: 'apk_installer' }),
   };
 }
 
@@ -405,5 +415,36 @@ describe('MobileApp', () => {
       settingsTab?.click();
     });
     expect(container.textContent).toContain('Escolher onde salvar arquivos');
+  });
+
+  it('exibe banner e botão Atualizar agora quando há nova versão disponível', async () => {
+    const snap = makeSnapshot();
+    const bridge = makeMockBridge(snap);
+    bridge.checkForAppUpdate = vi.fn().mockResolvedValue({
+      currentVersion: '0.4.0',
+      latestVersion: '0.5.0',
+      hasUpdate: true,
+      releaseUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/tag/v0.5.0',
+      downloadUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/download/v0.5.0/DriveSync-Android.apk',
+      assetName: 'DriveSync-Android.apk',
+      assetSizeBytes: 4880235,
+      checkedAt: '2026-11-18T00:00:00Z',
+    });
+
+    await act(async () => {
+      root.render(<MobileApp bridge={bridge} />);
+    });
+    await act(async () => {});
+
+    expect(container.textContent).toContain('Nova atualização disponível: v0.5.0');
+    const updateBtn = findButton(container, 'Atualizar agora');
+    expect(updateBtn).toBeDefined();
+    await act(async () => {
+      updateBtn?.click();
+    });
+    expect(bridge.downloadAndInstallUpdate).toHaveBeenCalledWith({
+      downloadUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/download/v0.5.0/DriveSync-Android.apk',
+      version: '0.5.0',
+    });
   });
 });

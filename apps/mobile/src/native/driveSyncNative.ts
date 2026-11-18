@@ -1,8 +1,12 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import {
+  APP_VERSION,
+  GITHUB_RELEASES_LATEST_API,
   MAX_UPLOAD_BYTES,
+  parseGitHubReleaseForPlatform,
   type AccountInfo,
   type AppSettings,
+  type AppUpdateCheckResult,
   type CreateFolderInput,
   type DaemonSnapshot,
   type DiscoveredRemoteFolder,
@@ -76,6 +80,11 @@ export interface DriveSyncNativePlugin {
   forgetDevice(options: { folderId: string; deviceId: string }): Promise<{ ok: boolean }>;
   syncNow(options: { folderId: string }): Promise<{ started: boolean }>;
   updateSettings(options: { settings: MobileSettings }): Promise<MobileSettings>;
+  checkForAppUpdate(): Promise<AppUpdateCheckResult>;
+  downloadAndInstallUpdate(options?: {
+    downloadUrl?: string;
+    version?: string;
+  }): Promise<{ started: boolean; mode?: string }>;
   addListener?: (
     eventName: 'authUrlReady',
     listenerFunc: (data: { authUrl: string }) => void,
@@ -307,5 +316,22 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       async updateSettings({ settings }) {
         previewState.settings = settings;
         return settings;
+      },
+      async checkForAppUpdate() {
+        const res = await fetch(GITHUB_RELEASES_LATEST_API, {
+          headers: { Accept: 'application/vnd.github+json' },
+        });
+        if (!res.ok) {
+          throw new Error(`Falha ao consultar atualizações (${res.status}).`);
+        }
+        const payload = await res.json();
+        return parseGitHubReleaseForPlatform(payload, APP_VERSION, 'android');
+      },
+      async downloadAndInstallUpdate(options) {
+        const url =
+          options?.downloadUrl ||
+          'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Android.apk';
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return { started: true, mode: 'browser_download' };
       },
     };

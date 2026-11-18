@@ -464,15 +464,20 @@ button {
 .spotlight-card {
   --mx: 50%;
   --my: 0%;
+  --rx: 0deg;
+  --ry: 0deg;
+  --ty: 0px;
   position: relative;
   border-radius: 18px;
   padding: 1px;
   background: rgba(255, 255, 255, 0.08);
-  transition: transform 0.22s ease;
+  transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--ty));
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 .spotlight-card:hover {
-  transform: translateY(-3px);
+  --ty: -3px;
 }
 
 .spotlight-card::before {
@@ -770,6 +775,8 @@ button {
 }
 
 .metric-box {
+  --rx: 0deg;
+  --ry: 0deg;
   padding: 22px 22px;
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(16, 20, 30, 0.94), rgba(10, 12, 18, 0.98));
@@ -778,6 +785,12 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+}
+
+.metric-box:hover {
+  border-color: rgba(59, 130, 246, 0.45);
 }
 
 .metric-val {
@@ -853,9 +866,17 @@ button {
 
 .diagram-canvas {
   border-radius: 14px;
-  padding: 18px;
+  padding: 14px;
   background: #080b12;
   border: 1px solid var(--border-hairline);
+  overflow: hidden;
+}
+
+.diagram-canvas svg,
+.showcase-diagram-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .diagram-caption {
@@ -1036,9 +1057,157 @@ button {
 
 .showcase-diagram-wrap {
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px;
   background: rgba(6, 9, 15, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+/* 3D Scroll Companion Canvas & Interactive Floating HUD */
+#scroll-3d-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.companion-3d-dock {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 65;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 999px;
+  background: rgba(10, 14, 24, 0.84);
+  border: 1px solid rgba(59, 130, 246, 0.38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.companion-stage-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.companion-depth-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.companion-pulse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(34, 211, 238, 0.8));
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 11.5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+
+.companion-pulse-btn:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.5);
+}
+
+/* Interactive Simulation Bar & Animated SVG Flows */
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sim-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.85);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 600;
+  transition: transform 0.16s ease, border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+}
+
+.sim-btn:hover,
+.sim-btn.is-active {
+  color: #ffffff;
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(37, 99, 235, 0.24);
+  transform: translateY(-1px);
+}
+
+.svg-interactive-node {
+  cursor: pointer;
+  transition: filter 0.18s ease, opacity 0.2s ease;
+}
+
+.svg-interactive-node:hover {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.65));
+}
+
+.svg-dash-flow {
+  stroke-dasharray: 7 7;
+  animation: svg-dash-move 1.6s linear infinite;
+}
+
+.svg-dash-flow--fast {
+  stroke-dasharray: 9 6;
+  animation: svg-dash-move 0.75s linear infinite;
+}
+
+@keyframes svg-dash-move {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.svg-pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: svg-ring-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes svg-ring-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 680px) {
+  .companion-3d-dock {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    justify-content: space-between;
+  }
 }
 
 /* HTML/CSS Flow Diagrams (Zero Scrollbars, Natural Text Wrap) */
@@ -1516,7 +1685,10 @@ button {
   }
 
   .pipeline-shell::before,
-  .flow-beam::after {
+  .flow-beam::after,
+  .svg-dash-flow,
+  .svg-dash-flow--fast,
+  .svg-pulse-ring {
     animation: none;
   }
 

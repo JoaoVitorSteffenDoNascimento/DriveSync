@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   Menu,
+  Notification,
   Tray,
   dialog,
   ipcMain,
@@ -13,6 +14,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { AppUpdateCheckResult } from '@drivesync/shared';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -20,6 +22,199 @@ let daemonProc: ChildProcess | null = null;
 let daemonPort = 0;
 let isQuitting = false;
 let minimizeToTrayPref = true;
+let lastNotifiedVersion = '';
+
+const RELEASE_API_URL =
+  'https://api.github.com/repos/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest';
+const RELEASES_PAGE_URL =
+  'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest';
+
+function normalizeSemVer(raw: string): string {
+  const cleaned = String(raw || '').trim().replace(/^[vV]/, '');
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(cleaned);
+  return match ? `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}` : '';
+}
+
+function semVerCode(raw: string): number {
+  const norm = normalizeSemVer(raw);
+  if (!norm) return 0;
+  const [maj, min, pat] = norm.split('.').map(Number);
+  return maj * 10000 + min * 100 + pat;
+}
+
+async function checkDesktopUpdate(notifyOs = true): Promise<AppUpdateCheckResult> {
+  const currentVersion = normalizeSemVer(app.getVersion()) || app.getVersion();
+  const res = await fetch(RELEASE_API_URL, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': `DriveSync-Desktop/${currentVersion}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`GitHub Releases retornou HTTP ${res.status}`);
+  }
+  const payload = (await res.json()) as {
+    tag_name?: string;
+    html_url?: string;
+    body?: string;
+    published_at?: string;
+    assets?: Array<{ name?: string; browser_download_url?: string; size?: number }>;
+  };
+
+  const latestVersion = normalizeSemVer(payload.tag_name ?? '') || currentVersion;
+  const hasUpdate = semVerCode(latestVersion) > semVerCode(currentVersion);
+  const assets = Array.isArray(payload.assets) ? payload.assets : [];
+  const wantExt = process.platform === 'win32' ? /\.exe$/i : /\.AppImage$/i;
+  const fallbackName =
+    process.platform === 'win32' ? 'DriveSync-Setup-Windows-x64.exe' : 'DriveSync-Linux-x64.AppImage';
+  const matched = assets.find((a) => typeof a.name === 'string' && wantExt.test(a.name));
+  const assetName = matched?.name || fallbackName;
+  const downloadUrl =
+    matched?.browser_download_url ||
+    `https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/${assetName}`;
+
+  const result: AppUpdateCheckResult = {
+    currentVersion,
+    latestVersion,
+    hasUpdate,
+    releaseUrl: payload.html_url || RELEASES_PAGE_URL,
+    downloadUrl,
+    assetName,
+    assetSizeBytes: matched?.size,
+    releaseNotes: payload.body,
+    publishedAt: payload.published_at,
+    checkedAt: new Date().toISOString(),
+  };
+
+  if (hasUpdate) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:update-available', result);
+    }
+    if (notifyOs && lastNotifiedVersion !== latestVersion && Notification.isSupported()) {
+      lastNotifiedVersion = latestVersion;
+      const n = new Notification({
+        title: `DriveSync v${latestVersion} disponível`,
+        body: 'Clique para abrir o DriveSync e atualizar com 1 clique.',
+      });
+      n.on('click', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          if (!mainWindow.isVisible()) mainWindow.show();
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+        }
+      });
+      n.show();
+    }
+  }
+
+  return result;
+}
+
+async function downloadBinaryToFile(url: string, destPath: string): Promise<void> {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': `DriveSync-Desktop/${app.getVersion()}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Falha no download da atualização (HTTP ${res.status}).`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  const tmpPath = `${destPath}.tmp`;
+  fs.writeFileSync(tmpPath, buf);
+  fs.renameSync(tmpPath, destPath);
+}
+
+function findLocalRepoForUpdate(): string | null {
+  const candidates = [process.cwd(), path.join(os.homedir(), 'Projetos', 'DriveSync')];
+  for (const dir of candidates) {
+    if (
+      fs.existsSync(path.join(dir, '.git')) &&
+      fs.existsSync(path.join(dir, 'packaging', 'scripts', 'install-local-linux.sh'))
+    ) {
+      return dir;
+    }
+  }
+  return null;
+}
+
+async function installDesktopUpdate(rawDownloadUrl?: string): Promise<{
+  started: boolean;
+  mode: string;
+  detail: string;
+}> {
+  const fallbackUrl =
+    process.platform === 'win32'
+      ? 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Setup-Windows-x64.exe'
+      : 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/latest/download/DriveSync-Linux-x64.AppImage';
+  const targetUrl =
+    rawDownloadUrl && rawDownloadUrl.startsWith('https://') ? rawDownloadUrl : fallbackUrl;
+
+  if (process.platform === 'win32') {
+    const installerPath = path.join(os.tmpdir(), 'DriveSync-Setup-Update.exe');
+    await downloadBinaryToFile(targetUrl, installerPath);
+    const child = spawn(installerPath, [], { detached: true, stdio: 'ignore' });
+    child.unref();
+    isQuitting = true;
+    setTimeout(() => app.quit(), 400);
+    return {
+      started: true,
+      mode: 'windows_installer',
+      detail: 'Instalador baixado e iniciado em segundo plano.',
+    };
+  }
+
+  if (process.platform === 'linux') {
+    const runningAppImage = process.env.APPIMAGE;
+    if (runningAppImage) {
+      await downloadBinaryToFile(targetUrl, runningAppImage);
+      fs.chmodSync(runningAppImage, 0o755);
+      app.relaunch({ execPath: runningAppImage });
+      isQuitting = true;
+      setTimeout(() => app.quit(), 350);
+      return {
+        started: true,
+        mode: 'appimage_relaunch',
+        detail: 'Nova versão do AppImage baixada; reiniciando aplicativo.',
+      };
+    }
+
+    const localRepo = findLocalRepoForUpdate();
+    if (!app.isPackaged && localRepo) {
+      const localBin = path.join(os.homedir(), '.local', 'bin', 'drivesync');
+      const updaterScript = [
+        'sleep 1',
+        `git -C ${JSON.stringify(localRepo)} pull --ff-only`,
+        `bash ${JSON.stringify(path.join(localRepo, 'packaging', 'scripts', 'install-local-linux.sh'))}`,
+        `setsid -f ${JSON.stringify(localBin)} </dev/null >/dev/null 2>&1`,
+      ].join(' && ');
+      const child = spawn('bash', ['-lc', updaterScript], { detached: true, stdio: 'ignore' });
+      child.unref();
+      isQuitting = true;
+      setTimeout(() => app.quit(), 350);
+      return {
+        started: true,
+        mode: 'linux_local_rebuild',
+        detail: 'Atualizando instalação local e reiniciando o DriveSync...',
+      };
+    }
+
+    const appImageDest = path.join(os.homedir(), '.local', 'share', 'drivesync', 'DriveSync.AppImage');
+    await downloadBinaryToFile(targetUrl, appImageDest);
+    fs.chmodSync(appImageDest, 0o755);
+    const child = spawn(appImageDest, [], { detached: true, stdio: 'ignore' });
+    child.unref();
+    isQuitting = true;
+    setTimeout(() => app.quit(), 400);
+    return {
+      started: true,
+      mode: 'linux_appimage',
+      detail: 'Nova versão baixada e iniciada.',
+    };
+  }
+
+  await shell.openExternal(RELEASES_PAGE_URL);
+  return { started: true, mode: 'browser_download', detail: 'Página de download aberta no navegador.' };
+}
 
 const sessionToken = crypto.randomBytes(24).toString('hex');
 
@@ -366,6 +561,14 @@ function registerIPC() {
   ipcMain.handle('app:set-autostart', (_ev, enabled: boolean) => {
     applyAutoStart(Boolean(enabled));
   });
+
+  ipcMain.handle('app:check-update', (_ev, notifyOs?: boolean) =>
+    checkDesktopUpdate(notifyOs !== false),
+  );
+
+  ipcMain.handle('app:install-update', (_ev, downloadUrl?: string) =>
+    installDesktopUpdate(downloadUrl),
+  );
 }
 
 app.setName('DriveSync');
@@ -409,6 +612,12 @@ if (!gotLock) {
       }
       setupTray();
       createWindow();
+      setTimeout(() => {
+        void checkDesktopUpdate(true).catch(() => {});
+      }, 5000);
+      setInterval(() => {
+        void checkDesktopUpdate(true).catch(() => {});
+      }, 30 * 60 * 1000);
     } catch (err) {
       dialog.showErrorBox(
         'Erro ao iniciar o DriveSync',

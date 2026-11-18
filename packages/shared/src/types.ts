@@ -239,3 +239,18 @@ export interface CreateFolderInput {
   onLocalDelete: LocalDeletePolicy;
   senderPolicy: SenderPolicy;
 }
+
+export type AppUpdatePlatform = 'windows' | 'linux' | 'android';
+
+export interface AppUpdateCheckResult {
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
+  releaseUrl: string;
+  downloadUrl: string;
+  assetName: string;
+  assetSizeBytes?: number;
+  releaseNotes?: string;
+  publishedAt?: string;
+  checkedAt: string;
+}

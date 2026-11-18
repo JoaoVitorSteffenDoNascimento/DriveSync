@@ -114,6 +114,40 @@ const TARGETS = [
         value: (v) => v,
         format: (val) => `$1${val}$3`,
       },
+      {
+        name: 'Site styles.css cache-bust',
+        pattern: /(href="styles\.css\?v=)([^"]+)(")/,
+        value: (v) => v,
+        format: (val) => `$1${val}$3`,
+      },
+      {
+        name: 'Site app.js cache-bust',
+        pattern: /(src="app\.js\?v=)([^"]+)(")/,
+        value: (v) => v,
+        format: (val) => `$1${val}$3`,
+      },
+    ],
+  },
+  {
+    file: 'docs/privacy.html',
+    rules: [
+      {
+        name: 'Privacy styles.css cache-bust',
+        pattern: /(href="styles\.css\?v=)([^"]+)(")/,
+        value: (v) => v,
+        format: (val) => `$1${val}$3`,
+      },
+    ],
+  },
+  {
+    file: 'docs/terms.html',
+    rules: [
+      {
+        name: 'Terms styles.css cache-bust',
+        pattern: /(href="styles\.css\?v=)([^"]+)(")/,
+        value: (v) => v,
+        format: (val) => `$1${val}$3`,
+      },
     ],
   },
   {

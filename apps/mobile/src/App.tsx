@@ -35,6 +35,7 @@ import {
   formatBytes,
   formatStoragePath,
   normalizeEmail,
+  type AppUpdateCheckResult,
   type DiscoveredRemoteFolder,
   type FolderRuntimeState,
   type RemoteDeletePolicy,
@@ -123,6 +124,50 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
   const [settingsFolder, setSettingsFolder] = useState<SyncFolderConfig | null>(null);
   const [loadingDiscovered, setLoadingDiscovered] = useState(false);
   const [syncingDiscovered, setSyncingDiscovered] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateCheckResult | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
+
+  const checkUpdates = useCallback(
+    async (manual = false) => {
+      setCheckingUpdate(true);
+      if (manual) setError(null);
+      try {
+        const info = await bridge.checkForAppUpdate();
+        setUpdateInfo(info);
+        if (manual) {
+          setNotice(
+            info.hasUpdate
+              ? `Nova versão v${info.latestVersion} disponível!`
+              : `Você já está na versão mais recente (v${APP_VERSION}).`,
+          );
+        }
+      } catch (e) {
+        if (manual) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        setCheckingUpdate(false);
+      }
+    },
+    [bridge],
+  );
+
+  const installUpdate = useCallback(async () => {
+    setInstallingUpdate(true);
+    setError(null);
+    try {
+      await bridge.downloadAndInstallUpdate({
+        downloadUrl: updateInfo?.downloadUrl,
+        version: updateInfo?.latestVersion,
+      });
+      setNotice('Instalador da atualização aberto. Conclua a instalação no Android.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInstallingUpdate(false);
+    }
+  }, [bridge, updateInfo]);
 
   const refresh = useCallback(async () => {
     try {
@@ -148,7 +193,8 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    void checkUpdates(false);
+  }, [refresh, checkUpdates]);
 
   useEffect(() => {
     if (snap?.account.connected) {
@@ -160,11 +206,12 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         void refresh();
+        void checkUpdates(false);
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [refresh]);
+  }, [refresh, checkUpdates]);
 
   const hasActiveSync = Boolean(
     snap && Object.values(snap.runtime).some((rt) => rt.status === 'syncing'),
@@ -291,6 +338,30 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
       </header>
 
       <main className="mobile-content">
+        {updateInfo?.hasUpdate && (
+          <div className="card" style={{ borderColor: 'var(--primary)', marginBottom: 12 }}>
+            <div className="row-between" style={{ alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong style={{ fontSize: 13.5 }}>
+                  Nova atualização disponível: v{updateInfo.latestVersion}
+                </strong>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Instalada: v{APP_VERSION}
+                  {updateInfo.assetSizeBytes ? ` • ${formatBytes(updateInfo.assetSizeBytes)}` : ''}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={installingUpdate}
+                onClick={() => void installUpdate()}
+              >
+                <CloudDownload size={14} />
+                {installingUpdate ? 'Baixando APK...' : 'Atualizar agora'}
+              </button>
+            </div>
+          </div>
+        )}
         {error && <div className="alert alert-error">{error}</div>}
         {notice && <div className="alert alert-info">{notice}</div>}
 
@@ -611,6 +682,11 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
           <MobileSettingsTab
             bridge={bridge}
             snap={snap}
+            updateInfo={updateInfo}
+            checkingUpdate={checkingUpdate}
+            installingUpdate={installingUpdate}
+            onCheckUpdate={() => void checkUpdates(true)}
+            onInstallUpdate={() => void installUpdate()}
             onOpenAuth={() => setShowAuthModal(true)}
             onRefresh={refresh}
             onNotice={setNotice}
@@ -1096,11 +1172,28 @@ const MobileActivityTab: React.FC<{
 const MobileSettingsTab: React.FC<{
   bridge: DriveSyncNativePlugin;
   snap: MobileSnapshot;
+  updateInfo: AppUpdateCheckResult | null;
+  checkingUpdate: boolean;
+  installingUpdate: boolean;
+  onCheckUpdate: () => void;
+  onInstallUpdate: () => void;
   onOpenAuth: () => void;
   onRefresh: () => Promise<void>;
   onNotice: (msg: string | null) => void;
   onError: (msg: string | null) => void;
-}> = ({ bridge, snap, onOpenAuth, onRefresh, onNotice, onError }) => {
+}> = ({
+  bridge,
+  snap,
+  updateInfo,
+  checkingUpdate,
+  installingUpdate,
+  onCheckUpdate,
+  onInstallUpdate,
+  onOpenAuth,
+  onRefresh,
+  onNotice,
+  onError,
+}) => {
   const [form, setForm] = useState<MobileSettings>(snap.settings);
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
@@ -1138,6 +1231,47 @@ const MobileSettingsTab: React.FC<{
       <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-muted)' }}>
         Preferências do celular, conta Google Drive e regras padrão de segurança.
       </p>
+
+      <div className="card">
+        <div className="row-between" style={{ alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <strong>Atualização do Aplicativo</strong>
+            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
+              Versão instalada: <strong>v{APP_VERSION}</strong>
+              {updateInfo?.hasUpdate
+                ? ` • Nova versão v${updateInfo.latestVersion} pronta!`
+                : updateInfo
+                  ? ' • Aplicativo atualizado'
+                  : ''}
+            </div>
+          </div>
+
+          <div className="row-gap" style={{ flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={checkingUpdate || installingUpdate}
+              onClick={onCheckUpdate}
+            >
+              <RefreshCw size={14} />
+              {checkingUpdate ? 'Verificando...' : 'Verificar atualizações'}
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${updateInfo?.hasUpdate ? 'btn-primary' : ''}`}
+              disabled={installingUpdate}
+              onClick={onInstallUpdate}
+            >
+              <CloudDownload size={14} />
+              {installingUpdate
+                ? 'Baixando APK...'
+                : updateInfo?.hasUpdate
+                  ? `Atualizar agora (v${updateInfo.latestVersion})`
+                  : 'Baixar/Reinstalar (.apk)'}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="card">
         <div className="row-between" style={{ alignItems: 'flex-start' }}>

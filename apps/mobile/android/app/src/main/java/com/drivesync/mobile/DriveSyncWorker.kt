@@ -49,6 +49,15 @@ class DriveSyncWorker(
             val api = DriveApiClient(db, applicationContext)
             val engine = MobileSyncEngine(applicationContext, db, api)
             engine.syncAllFolders()
+            runCatching {
+                val updateJson = DriveSyncPlugin.checkGitHubLatestRelease()
+                if (updateJson.optBoolean("hasUpdate", false)) {
+                    DriveSyncPlugin.postUpdateNotificationIfNeeded(
+                        applicationContext,
+                        updateJson.optString("latestVersion", "")
+                    )
+                }
+            }
             Result.success()
         } catch (_: Exception) {
             Result.retry()

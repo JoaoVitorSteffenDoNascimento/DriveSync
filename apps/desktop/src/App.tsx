@@ -2,12 +2,19 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   Cloud,
+  CloudDownload,
   FolderSync,
   Settings,
   Users,
 } from 'lucide-react';
-import type { DaemonSnapshot, FolderRuntimeState } from '@drivesync/shared';
-import { APP_VERSION, formatBytes } from '@drivesync/shared';
+import type { AppUpdateCheckResult, DaemonSnapshot, FolderRuntimeState } from '@drivesync/shared';
+import {
+  APP_VERSION,
+  GITHUB_RELEASES_LATEST_API,
+  GITHUB_RELEASES_URL,
+  formatBytes,
+  parseGitHubReleaseForPlatform,
+} from '@drivesync/shared';
 import { DaemonClient } from './api/daemonClient';
 import { ConnectFolderWizard } from './components/ConnectFolderWizard';
 import { ConnectGoogleModal } from './components/ConnectGoogleModal';
@@ -27,6 +34,78 @@ export const App: React.FC<{ overrideClient?: DaemonClient }> = ({ overrideClien
   const [showWizard, setShowWizard] = useState(false);
   const [showConnectGoogle, setShowConnectGoogle] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateCheckResult | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+
+  const checkUpdates = useCallback(
+    async (manual = false) => {
+      if (!manual && overrideClient && !window.driveSyncDesktop?.checkForUpdates) {
+        return;
+      }
+      setCheckingUpdate(true);
+      if (manual) setUpdateMessage(null);
+      try {
+        let info: AppUpdateCheckResult;
+        if (window.driveSyncDesktop?.checkForUpdates) {
+          info = await window.driveSyncDesktop.checkForUpdates(false);
+        } else {
+          const res = await fetch(GITHUB_RELEASES_LATEST_API, {
+            headers: { Accept: 'application/vnd.github+json' },
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const payload = await res.json();
+          const platform =
+            window.driveSyncDesktop?.getPlatformInfo().platform === 'win32' ? 'windows' : 'linux';
+          info = parseGitHubReleaseForPlatform(payload, APP_VERSION, platform);
+        }
+        setUpdateInfo(info);
+        if (manual) {
+          setUpdateMessage(
+            info.hasUpdate
+              ? `Nova versão v${info.latestVersion} disponível!`
+              : `Você já está usando a versão mais recente (v${APP_VERSION}).`,
+          );
+        }
+      } catch (err) {
+        if (manual) {
+          setUpdateMessage(
+            err instanceof Error ? `Erro ao verificar atualizações: ${err.message}` : 'Erro ao verificar atualizações.',
+          );
+        }
+      } finally {
+        setCheckingUpdate(false);
+      }
+    },
+    [overrideClient],
+  );
+
+  const handleInstallUpdate = useCallback(async () => {
+    setInstallingUpdate(true);
+    setUpdateMessage(null);
+    try {
+      if (window.driveSyncDesktop?.installUpdate) {
+        const res = await window.driveSyncDesktop.installUpdate(updateInfo?.downloadUrl);
+        setUpdateMessage(res.detail || 'Atualização iniciada.');
+      } else {
+        window.open(updateInfo?.downloadUrl || GITHUB_RELEASES_URL, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      setUpdateMessage(
+        err instanceof Error ? `Falha ao atualizar: ${err.message}` : 'Falha ao iniciar atualização.',
+      );
+      setInstallingUpdate(false);
+    }
+  }, [updateInfo]);
+
+  useEffect(() => {
+    void checkUpdates(false);
+    if (!window.driveSyncDesktop?.onUpdateAvailable) return undefined;
+    return window.driveSyncDesktop.onUpdateAvailable((info) => {
+      setUpdateInfo(info);
+    });
+  }, [checkUpdates]);
 
   useEffect(() => {
     if (overrideClient) {
@@ -213,6 +292,31 @@ export const App: React.FC<{ overrideClient?: DaemonClient }> = ({ overrideClien
         </header>
 
         <main className="content">
+          {updateInfo?.hasUpdate && (
+            <div className="card" style={{ borderColor: 'var(--primary)', marginBottom: 16 }}>
+              <div className="row-inline" style={{ justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <strong style={{ fontSize: 14 }}>
+                    Nova atualização disponível: v{updateInfo.latestVersion}
+                  </strong>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Versão instalada: v{APP_VERSION}
+                    {updateInfo.assetSizeBytes ? ` • ${formatBytes(updateInfo.assetSizeBytes)}` : ''}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={installingUpdate}
+                  onClick={() => void handleInstallUpdate()}
+                >
+                  <CloudDownload size={15} />
+                  {installingUpdate ? 'Atualizando...' : 'Atualizar agora'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {tab === 'folders' && (
             <FoldersPage
               client={client}
@@ -239,6 +343,12 @@ export const App: React.FC<{ overrideClient?: DaemonClient }> = ({ overrideClien
             <SettingsPage
               client={client}
               snapshot={snapshot}
+              updateInfo={updateInfo}
+              checkingUpdate={checkingUpdate}
+              installingUpdate={installingUpdate}
+              updateMessage={updateMessage}
+              onCheckUpdate={() => void checkUpdates(true)}
+              onInstallUpdate={() => void handleInstallUpdate()}
               onOpenConnectGoogle={() => setShowConnectGoogle(true)}
               onRefresh={refresh}
             />

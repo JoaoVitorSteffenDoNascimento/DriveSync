@@ -5,9 +5,13 @@ import {
   computeAndroidVersionCode,
   formatBytes,
   formatStoragePath,
+  isNewerVersionAvailable,
   isSenderAllowed,
   isUploadWithinLimit,
+  normalizeSemVer,
+  compareSemVer,
   parseFolderCodeOrLink,
+  parseGitHubReleaseForPlatform,
   validateCreateFolderInput,
 } from './index.js';
 import type { SenderPolicy } from './types.js';
@@ -110,5 +114,45 @@ describe('regras compartilhadas DriveSync', () => {
     ).toBe('Memória interna/Teste DriveSync/Teste');
     expect(formatStoragePath('/home/brendha/Master')).toBe('~/Master');
     expect(formatStoragePath('')).toBe('Não definida');
+  });
+
+  it('compara versões SemVer e seleciona o instalador correto por plataforma', () => {
+    expect(normalizeSemVer('v0.5.0')).toBe('0.5.0');
+    expect(compareSemVer('0.5.0', '0.4.0')).toBeGreaterThan(0);
+    expect(isNewerVersionAvailable('0.4.0', 'v0.5.0')).toBe(true);
+    expect(isNewerVersionAvailable('0.5.0', 'v0.5.0')).toBe(false);
+    expect(isNewerVersionAvailable('0.5.0', 'v0.4.0')).toBe(false);
+
+    const parsed = parseGitHubReleaseForPlatform(
+      {
+        tag_name: 'v0.5.0',
+        html_url: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/tag/v0.5.0',
+        published_at: '2026-11-18T04:00:00Z',
+        assets: [
+          {
+            name: 'DriveSync-Android.apk',
+            browser_download_url: 'https://example.com/DriveSync-Android.apk',
+            size: 4880235,
+          },
+          {
+            name: 'DriveSync-Setup-Windows-x64.exe',
+            browser_download_url: 'https://example.com/DriveSync-Setup-Windows-x64.exe',
+            size: 97908415,
+          },
+          {
+            name: 'DriveSync-Linux-x64.AppImage',
+            browser_download_url: 'https://example.com/DriveSync-Linux-x64.AppImage',
+            size: 122358540,
+          },
+        ],
+      },
+      '0.4.0',
+      'android',
+    );
+
+    expect(parsed.hasUpdate).toBe(true);
+    expect(parsed.latestVersion).toBe('0.5.0');
+    expect(parsed.assetName).toBe('DriveSync-Android.apk');
+    expect(parsed.downloadUrl).toBe('https://example.com/DriveSync-Android.apk');
   });
 });

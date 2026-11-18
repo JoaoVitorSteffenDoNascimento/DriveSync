@@ -2,6 +2,22 @@
 
 Todas as alterações relevantes do **DriveSync** são documentadas neste arquivo seguindo os padrões [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e [Semantic Versioning 2.0.0](https://semver.org/lang/pt-BR/).
 
+## [0.5.0] - 2026-11-18
+
+### Adicionado
+- **Detecção automática e botão "Atualizar agora" no próprio app (Desktop Windows/Linux e Mobile Android)**:
+  - Checagem periódica e em primeiro plano da última release no GitHub Releases com comparação SemVer (`parseGitHubReleaseForPlatform`, `isNewerVersionAvailable`, `compareSemVer`).
+  - Banner destacado no topo do app quando há nova versão disponível e card dedicado **Atualização do Aplicativo** em **Configurações** com botão **Verificar atualizações** e **Atualizar agora**.
+  - Notificação nativa do sistema quando uma versão nova é detectada (Electron `Notification` no Windows/Linux e `NotificationCompat` via `DriveSyncWorker` / `DriveSyncPlugin` no Android).
+  - Instalação integrada direto pelo botão: download e execução do `.exe` no Windows, troca/reinício automático de `.AppImage` ou atualização local no Linux, e download + abertura do instalador nativo `.apk` via `FileProvider` no Android.
+- **Site institucional interativo com objeto 3D no scroll e diagramas SVG animados (`docs/`)**:
+  - Núcleo 3D cristalino com anéis giroscópicos e satélites (`WIN`, `APK`, `LNX`) no `<canvas id="scroll-3d-canvas">` que acompanha o usuário ao rolar a página, muda de paleta por seção e responde ao botão **Pulso 3D** no dock flutuante.
+  - Diagramas SVG originais restaurados com espaçamento ajustado (sem textos cortados e sem barras de rolagem), partículas animadas nos fluxos, barra de simulação no Hero (**Simular envio agora**, **Testar trava 4 GB**, **Novo arquivo da equipe**) e alternância ao vivo de participante bloqueado/aceito no diagrama **Modo Drive Master**.
+  - Efeito de inclinação 3D em perspectiva nos cards ao mover o cursor.
+
+### Corrigido
+- **Cache-busting no site institucional (`docs/`)**: `?v=X.Y.Z` automático em `styles.css` e `app.js` gerenciado por `bump-version.mjs` em `index.html`, `privacy.html` e `terms.html`.
+
 ## [0.4.0] - 2026-11-18
 
 ### Adicionado

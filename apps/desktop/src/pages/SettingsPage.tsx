@@ -1,7 +1,23 @@
 import React, { useState } from 'react';
-import { Check, CheckCircle2, Copy, ExternalLink, FolderOpen, LogOut, Share2, ShieldCheck } from 'lucide-react';
-import type { AppSettings, DaemonSnapshot, RemoteDeletePolicy } from '@drivesync/shared';
-import { formatBytes } from '@drivesync/shared';
+import {
+  Check,
+  CheckCircle2,
+  CloudDownload,
+  Copy,
+  ExternalLink,
+  FolderOpen,
+  LogOut,
+  RefreshCw,
+  Share2,
+  ShieldCheck,
+} from 'lucide-react';
+import type {
+  AppSettings,
+  AppUpdateCheckResult,
+  DaemonSnapshot,
+  RemoteDeletePolicy,
+} from '@drivesync/shared';
+import { APP_VERSION, formatBytes } from '@drivesync/shared';
 import type { DaemonClient } from '../api/daemonClient';
 
 const DOWNLOAD_SITE_URL = 'https://joaovitorsteffendonascimento.github.io/DriveSync/';
@@ -10,6 +26,12 @@ const RELEASES_URL = 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/
 interface Props {
   client: DaemonClient;
   snapshot: DaemonSnapshot;
+  updateInfo: AppUpdateCheckResult | null;
+  checkingUpdate: boolean;
+  installingUpdate: boolean;
+  updateMessage: string | null;
+  onCheckUpdate: () => void;
+  onInstallUpdate: () => void;
   onOpenConnectGoogle: () => void;
   onRefresh: () => Promise<void>;
 }
@@ -17,6 +39,12 @@ interface Props {
 export const SettingsPage: React.FC<Props> = ({
   client,
   snapshot,
+  updateInfo,
+  checkingUpdate,
+  installingUpdate,
+  updateMessage,
+  onCheckUpdate,
+  onInstallUpdate,
   onOpenConnectGoogle,
   onRefresh,
 }) => {
@@ -61,6 +89,52 @@ export const SettingsPage: React.FC<Props> = ({
           <p className="page-subtitle">
             Preferências do dispositivo, conta Google Drive e regras padrão de segurança.
           </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="row-inline" style={{ justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <strong style={{ fontSize: 15 }}>Atualização do Aplicativo</strong>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+              Versão instalada: <strong>v{APP_VERSION}</strong>
+              {updateInfo?.hasUpdate
+                ? ` • Nova versão v${updateInfo.latestVersion} disponível!`
+                : updateInfo
+                  ? ' • Aplicativo atualizado'
+                  : ''}
+            </div>
+            {updateMessage && (
+              <div style={{ fontSize: 12.5, color: 'var(--primary)', marginTop: 4 }}>
+                {updateMessage}
+              </div>
+            )}
+          </div>
+
+          <div className="row-inline">
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={checkingUpdate || installingUpdate}
+              onClick={onCheckUpdate}
+            >
+              <RefreshCw size={14} />
+              {checkingUpdate ? 'Verificando...' : 'Verificar atualizações'}
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${updateInfo?.hasUpdate ? 'btn-primary' : ''}`}
+              disabled={installingUpdate}
+              onClick={onInstallUpdate}
+            >
+              <CloudDownload size={14} />
+              {installingUpdate
+                ? 'Atualizando...'
+                : updateInfo?.hasUpdate
+                  ? `Atualizar agora (v${updateInfo.latestVersion})`
+                  : 'Reinstalar versão mais recente'}
+            </button>
+          </div>
         </div>
       </div>
 

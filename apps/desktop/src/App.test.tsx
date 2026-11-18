@@ -200,9 +200,80 @@ describe('App UI DriveSync', () => {
     expect(container.textContent).toContain('João');
     expect(container.textContent).toContain('Luiz');
 
+    // Navega para Configurações e confirma card de atualização do app
+    const settingsBtn = navButtons.find((b) => b.textContent?.includes('Configurações'));
+    expect(settingsBtn).toBeDefined();
+    await act(async () => {
+      settingsBtn!.click();
+    });
+    expect(container.textContent).toContain('Atualização do Aplicativo');
+    expect(container.textContent).toContain('Verificar atualizações');
+
     await act(async () => {
       root.unmount();
     });
     container.remove();
+  });
+
+  it('avisa quando há atualização disponível e inicia atualização em 1 clique', async () => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const mockClient = createMockClient(sampleSnapshot);
+    const installUpdate = vi.fn().mockResolvedValue({
+      started: true,
+      mode: 'appimage_relaunch',
+      detail: 'Reiniciando...',
+    });
+
+    window.driveSyncDesktop = {
+      getDaemonConnection: vi.fn(),
+      selectLocalFolder: vi.fn(),
+      selectFilesToAdd: vi.fn(),
+      selectFoldersToAdd: vi.fn(),
+      getDroppedFilePaths: vi.fn(() => []),
+      openExternalUrl: vi.fn(),
+      openPathInExplorer: vi.fn(),
+      setAutoStart: vi.fn(),
+      getPlatformInfo: () => ({ platform: 'linux', arch: 'x64' }),
+      checkForUpdates: vi.fn().mockResolvedValue({
+        currentVersion: '0.4.0',
+        latestVersion: '0.5.0',
+        hasUpdate: true,
+        releaseUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/tag/v0.5.0',
+        downloadUrl: 'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/download/v0.5.0/DriveSync-Linux-x64.AppImage',
+        assetName: 'DriveSync-Linux-x64.AppImage',
+        assetSizeBytes: 122358540,
+        checkedAt: '2026-11-18T04:00:00Z',
+      }),
+      installUpdate,
+      onUpdateAvailable: () => () => {},
+    };
+
+    try {
+      await act(async () => {
+        root.render(<App overrideClient={mockClient} />);
+      });
+      await act(async () => {});
+
+      expect(container.textContent).toContain('Nova atualização disponível: v0.5.0');
+      const updateBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+        b.textContent?.includes('Atualizar agora'),
+      );
+      expect(updateBtn).toBeDefined();
+      await act(async () => {
+        updateBtn!.click();
+      });
+      expect(installUpdate).toHaveBeenCalledWith(
+        'https://github.com/JoaoVitorSteffenDoNascimento/DriveSync/releases/download/v0.5.0/DriveSync-Linux-x64.AppImage',
+      );
+    } finally {
+      delete window.driveSyncDesktop;
+      await act(async () => {
+        root.unmount();
+      });
+      container.remove();
+    }
   });
 });

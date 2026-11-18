@@ -1,6 +1,6 @@
 {
   "name": "drivesync-monorepo",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "DriveSync — Sincronização simples multiplataforma com Google Drive, modo Master, filtro de remetentes e trava de 4 GB",
   "workspaces": [
