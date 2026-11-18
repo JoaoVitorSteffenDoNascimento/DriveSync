@@ -32,6 +32,7 @@ export const MobileAuthSheet: React.FC<Props> = ({ bridge, hasClient, onClose, o
   const [showManual, setShowManual] = useState(!hasClient);
   const [loading, setLoading] = useState(false);
   const [activeAuthUrl, setActiveAuthUrl] = useState<string | null>(null);
+  const [callbackUrlInput, setCallbackUrlInput] = useState('');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -220,9 +221,9 @@ export const MobileAuthSheet: React.FC<Props> = ({ bridge, hasClient, onClose, o
         {activeAuthUrl && (
           <div className="alert alert-info">
             <div style={{ marginBottom: 8 }}>
-              Autorize no navegador aberto e depois toque em <strong>Voltar ao DriveSync</strong>.
+              Autorize no navegador aberto (o retorno em <code>127.0.0.1</code> é local deste celular e volta automático para o DriveSync).
             </div>
-            <div className="row-gap">
+            <div className="row-gap" style={{ marginBottom: 10 }}>
               <button
                 type="button"
                 className="btn btn-sm"
@@ -242,6 +243,37 @@ export const MobileAuthSheet: React.FC<Props> = ({ bridge, hasClient, onClose, o
               >
                 Cancelar
               </button>
+            </div>
+            <div className="form-group" style={{ marginBottom: 6 }}>
+              <label className="form-label" style={{ fontSize: 11.5 }}>
+                Se o navegador não voltar sozinho, cole a URL <code>http://127.0.0.1:...</code> aqui:
+              </label>
+              <div className="row-gap">
+                <input
+                  className="input"
+                  style={{ flex: 1, fontSize: 12 }}
+                  placeholder="http://127.0.0.1:53682/?code=..."
+                  value={callbackUrlInput}
+                  onChange={(e) => setCallbackUrlInput(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={!callbackUrlInput.trim()}
+                  onClick={async () => {
+                    setErr(null);
+                    try {
+                      await bridge.completeGoogleOAuthFromUrl({ callbackUrl: callbackUrlInput.trim() });
+                      await onUpdated();
+                      onClose();
+                    } catch (ex) {
+                      setErr(ex instanceof Error ? ex.message : String(ex));
+                    }
+                  }}
+                >
+                  Concluir
+                </button>
+              </div>
             </div>
           </div>
         )}

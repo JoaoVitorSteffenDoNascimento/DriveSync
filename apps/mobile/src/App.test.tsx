@@ -143,6 +143,7 @@ function makeMockBridge(snap: MobileSnapshot): DriveSyncNativePlugin {
     importRcloneConf: vi.fn().mockResolvedValue(snap.account),
     pickAndImportRcloneConf: vi.fn().mockResolvedValue(snap.account),
     startGoogleOAuth: vi.fn().mockResolvedValue(snap.account),
+    completeGoogleOAuthFromUrl: vi.fn().mockResolvedValue(snap.account),
     cancelGoogleOAuth: vi.fn().mockResolvedValue({ ok: true }),
     disconnectAccount: vi.fn().mockResolvedValue({ ok: true }),
     pickLocalFolder: vi.fn().mockResolvedValue({ uri: 'content://mock/tree/Nova', displayName: 'Nova' }),

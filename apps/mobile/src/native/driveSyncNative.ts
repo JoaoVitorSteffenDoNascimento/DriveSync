@@ -45,6 +45,7 @@ export interface DriveSyncNativePlugin {
   importRcloneConf(options: { rawConf: string; remoteName?: string }): Promise<AccountInfo>;
   pickAndImportRcloneConf(options: { remoteName?: string }): Promise<AccountInfo>;
   startGoogleOAuth(): Promise<AccountInfo>;
+  completeGoogleOAuthFromUrl(options: { callbackUrl: string }): Promise<AccountInfo>;
   cancelGoogleOAuth(): Promise<{ ok: boolean }>;
   disconnectAccount(): Promise<{ ok: boolean }>;
   pickLocalFolder(): Promise<PickedMobileFolder>;
@@ -153,6 +154,16 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
         return previewState.account;
       },
       async startGoogleOAuth() {
+        previewState.account = {
+          connected: true,
+          email: 'preview@gmail.com',
+          displayName: 'Preview Mobile',
+          authSource: 'oauth_pkce',
+          hasCustomOAuthClient: true,
+        };
+        return previewState.account;
+      },
+      async completeGoogleOAuthFromUrl() {
         previewState.account = {
           connected: true,
           email: 'preview@gmail.com',

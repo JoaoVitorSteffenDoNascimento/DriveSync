@@ -38,9 +38,24 @@ class DriveSyncPlugin : Plugin() {
     @Volatile
     private var activeAuthServer: ServerSocket? = null
 
+    @Volatile
+    private var pendingAuthCreds: OAuthClientCredentials? = null
+
+    @Volatile
+    private var pendingAuthRedirectUri: String = ""
+
+    @Volatile
+    private var pendingAuthState: String = ""
+
+    @Volatile
+    private var pendingAuthVerifier: String = ""
+
+    @Volatile
+    private var activeAuthCall: PluginCall? = null
+
     override fun load() {
         db = MobileStateDb(context)
-        api = DriveApiClient(db)
+        api = DriveApiClient(db, context)
         engine = MobileSyncEngine(context, db, api)
         DriveSyncWorker.applySchedule(context, db.getSettings())
     }
@@ -212,9 +227,67 @@ class DriveSyncPlugin : Plugin() {
 
     @PluginMethod
     fun cancelGoogleOAuth(call: PluginCall) {
+        clearPendingOAuthState()
+        call.resolve(JSObject().apply { put("ok", true) })
+    }
+
+    @PluginMethod
+    fun completeGoogleOAuthFromUrl(call: PluginCall) {
+        val rawUrl = call.getString("callbackUrl", "")?.trim().orEmpty()
+        if (rawUrl.isBlank()) {
+            call.reject("Cole a URL completa de retorno (http://127.0.0.1:...).")
+            return
+        }
+        val query = rawUrl.substringAfter('?', "")
+        val qParams = parseQuery(query)
+        val code = qParams["code"]?.trim().orEmpty()
+        if (code.isBlank()) {
+            call.reject("Essa URL não contém o parâmetro code= do Google.")
+            return
+        }
+        val expectedState = pendingAuthState
+        if (expectedState.isNotBlank() && qParams["state"] != null && qParams["state"] != expectedState) {
+            call.reject("O parâmetro state não confere com esta sessão. Inicie o login novamente.")
+            return
+        }
+        val creds = pendingAuthCreds ?: db.getEffectiveOAuthClient()
+        if (creds == null || creds.clientId.isBlank()) {
+            call.reject("Credencial OAuth ausente.")
+            return
+        }
+        val redirectUri = pendingAuthRedirectUri.ifBlank {
+            runCatching {
+                val u = Uri.parse(rawUrl)
+                val portPart = if (u.port > 0) ":${u.port}" else ""
+                "${u.scheme ?: "http"}://${u.host ?: "127.0.0.1"}$portPart/"
+            }.getOrDefault("http://127.0.0.1:53682/")
+        }
+        val verifier = pendingAuthVerifier
+        val previousCall = activeAuthCall
+        clearPendingOAuthState()
+
+        executor.execute {
+            runCatching {
+                val accountJson = finishGoogleOAuthExchange(creds, code, redirectUri, verifier)
+                previousCall?.resolve(accountJson)
+                accountJson
+            }.onSuccess { call.resolve(it) }
+                .onFailure {
+                    val msg = it.message ?: "Falha ao concluir login pela URL."
+                    previousCall?.reject(msg)
+                    call.reject(msg)
+                }
+        }
+    }
+
+    private fun clearPendingOAuthState() {
         runCatching { activeAuthServer?.close() }
         activeAuthServer = null
-        call.resolve(JSObject().apply { put("ok", true) })
+        pendingAuthCreds = null
+        pendingAuthRedirectUri = ""
+        pendingAuthState = ""
+        pendingAuthVerifier = ""
+        activeAuthCall = null
     }
 
     @PluginMethod
@@ -235,6 +308,12 @@ class DriveSyncPlugin : Plugin() {
                 val redirectUri = "http://127.0.0.1:$port/"
                 val state = randomUrlSafe(24)
                 val verifier = if (creds.clientSecret.isBlank()) randomUrlSafe(48) else ""
+
+                pendingAuthCreds = creds
+                pendingAuthRedirectUri = redirectUri
+                pendingAuthState = state
+                pendingAuthVerifier = verifier
+                activeAuthCall = call
 
                 val params = linkedMapOf(
                     "client_id" to creds.clientId,
@@ -288,6 +367,10 @@ class DriveSyncPlugin : Plugin() {
                     socket.use { sock ->
                         val reader = BufferedReader(InputStreamReader(sock.getInputStream(), StandardCharsets.UTF_8))
                         val requestLine = reader.readLine().orEmpty()
+                        while (true) {
+                            val headerLine = reader.readLine()
+                            if (headerLine.isNullOrEmpty()) break
+                        }
                         val parts = requestLine.split(' ')
                         val targetPath = parts.getOrNull(1).orEmpty()
                         val query = targetPath.substringAfter('?', "")
@@ -319,8 +402,8 @@ class DriveSyncPlugin : Plugin() {
                                     sock.getOutputStream(),
                                     200,
                                     buildResultHtml(
-                                        "Conta Google conectada!",
-                                        "Voltando automaticamente para o DriveSync..."
+                                        "Autorização recebida!",
+                                        "Retornando para o DriveSync para concluir a conexão..."
                                     )
                                 )
                             }
@@ -331,30 +414,78 @@ class DriveSyncPlugin : Plugin() {
                                 buildResultHtml("Aguardando Google...", "Conclua o login na janela aberta.")
                             )
                         }
+                        runCatching { Thread.sleep(80) }
                     }
                 }
 
+                runCatching { server.close() }
+                if (activeAuthServer === server) {
+                    activeAuthServer = null
+                }
+
+                // Traz o DriveSync para primeiro plano antes da chamada HTTPS, evitando bloqueio DNS em background no Android.
+                bringAppToFront()
+                runCatching { Thread.sleep(450) }
+
                 oauthError?.let { errMsg ->
-                    call.reject(errMsg)
+                    if (activeAuthCall === call) {
+                        clearPendingOAuthState()
+                        call.reject(errMsg)
+                    }
                     return@execute
                 }
 
                 val code = capturedCode ?: throw IllegalStateException("Código OAuth não recebido.")
-                val token = api.exchangeOAuthCode(creds, code, redirectUri, verifier)
-                db.saveToken(token)
-                val (email, displayName) = api.aboutUser()
-                db.saveAccountProfile(email, displayName)
-                db.saveAuthSource("oauth_pkce")
-                DriveSyncWorker.applySchedule(context, db.getSettings())
-                call.resolve(toJSObject(db.getAccountInfo().toJson()))
+                if (activeAuthCall !== call) {
+                    return@execute
+                }
+                val result = finishGoogleOAuthExchange(creds, code, redirectUri, verifier)
+                clearPendingOAuthState()
+                call.resolve(result)
             } catch (ex: Exception) {
-                call.reject(ex.message ?: "Falha no login com Google.")
+                if (activeAuthCall === call) {
+                    clearPendingOAuthState()
+                    call.reject(ex.message ?: "Falha no login com Google.")
+                }
             } finally {
                 if (activeAuthServer === server) {
                     activeAuthServer = null
                 }
                 runCatching { server?.close() }
             }
+        }
+    }
+
+    private fun finishGoogleOAuthExchange(
+        creds: OAuthClientCredentials,
+        code: String,
+        redirectUri: String,
+        verifier: String
+    ): JSObject {
+        val token = api.exchangeOAuthCode(creds, code, redirectUri, verifier)
+        db.saveToken(token)
+        val (email, displayName) = api.aboutUser()
+        db.saveAccountProfile(email, displayName)
+        db.saveAuthSource("oauth_pkce")
+        DriveSyncWorker.applySchedule(context, db.getSettings())
+        return toJSObject(db.getAccountInfo().toJson())
+    }
+
+    private fun bringAppToFront() {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = Uri.parse("com.drivesync.mobile://oauth-done")
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+        }
+        val act = activity
+        if (act != null) {
+            act.runOnUiThread { runCatching { act.startActivity(intent) } }
+        } else {
+            runCatching { context.startActivity(intent) }
         }
     }
 
@@ -848,25 +979,21 @@ class DriveSyncPlugin : Plugin() {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width,initial-scale=1" />
-          <meta http-equiv="refresh" content="0;url=com.drivesync.mobile://oauth-done" />
           <title>$title</title>
           <style>
             body{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;margin:0;text-align:center}
             .box{max-width:420px;background:#1e293b;padding:28px;border-radius:16px;border:1px solid rgba(255,255,255,.12)}
-            a{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600}
+            a{display:inline-block;margin-top:16px;padding:13px 22px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700}
+            p.sub{font-size:13px;color:#94a3b8;margin-top:14px}
           </style>
         </head>
         <body>
           <div class="box">
             <h2>$title</h2>
             <p>$detail</p>
-            <a href="com.drivesync.mobile://oauth-done">Voltar ao DriveSync</a>
+            <a href="intent://oauth-done#Intent;scheme=com.drivesync.mobile;package=com.drivesync.mobile;end">Voltar ao DriveSync</a>
+            <p class="sub">Se esta aba não fechar sozinha, toque no botão azul acima ou no X no canto da janela.</p>
           </div>
-          <script>
-            setTimeout(function() {
-              window.location.href = "com.drivesync.mobile://oauth-done";
-            }, 120);
-          </script>
         </body>
         </html>
     """.trimIndent()

@@ -1,14 +1,20 @@
 package com.drivesync.mobile
 
+import android.content.Context
+import android.net.ConnectivityManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.ProtocolException
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
+import java.net.UnknownHostException
 import java.nio.charset.StandardCharsets
 
 data class DriveRemoteFile(
@@ -26,13 +32,18 @@ data class DriveRemoteFile(
 
 class DriveApiException(val statusCode: Int, message: String) : Exception(message)
 
-class DriveApiClient(private val db: MobileStateDb) {
+class DriveApiClient(
+    private val db: MobileStateDb,
+    private val context: Context? = null
+) {
 
     companion object {
         private const val DRIVE_API = "https://www.googleapis.com/drive/v3"
         private const val UPLOAD_API = "https://www.googleapis.com/upload/drive/v3"
         private const val TOKEN_URL = "https://oauth2.googleapis.com/token"
+        private const val TOKEN_URL_FALLBACK = "https://accounts.google.com/o/oauth2/token"
         private const val CHUNK_SIZE = 4 * 1024 * 1024 // 4 MiB (multiple of 256 KiB required by Google Drive)
+        private val RETRY_DELAYS_MS = longArrayOf(0L, 450L, 800L, 1200L, 1600L)
     }
 
     fun exchangeOAuthCode(
@@ -54,7 +65,7 @@ class DriveApiClient(private val db: MobileStateDb) {
             params["code_verifier"] = codeVerifier
         }
         val body = formEncode(params)
-        val obj = postForm(TOKEN_URL, body)
+        val obj = postTokenForm(body)
         val expiresIn = obj.optLong("expires_in", 3600L)
         return StoredToken(
             accessToken = obj.getString("access_token"),
@@ -84,7 +95,7 @@ class DriveApiClient(private val db: MobileStateDb) {
         if (creds.clientSecret.isNotBlank()) {
             params["client_secret"] = creds.clientSecret
         }
-        val obj = postForm(TOKEN_URL, formEncode(params))
+        val obj = postTokenForm(formEncode(params))
         val expiresIn = obj.optLong("expires_in", 3600L)
         val refreshed = StoredToken(
             accessToken = obj.getString("access_token"),
@@ -110,7 +121,7 @@ class DriveApiClient(private val db: MobileStateDb) {
             if (creds.clientSecret.isNotBlank()) {
                 params["client_secret"] = creds.clientSecret
             }
-            val obj = postForm(TOKEN_URL, formEncode(params))
+            val obj = postTokenForm(formEncode(params))
             val expiresIn = obj.optLong("expires_in", 3600L)
             return StoredToken(
                 accessToken = obj.getString("access_token"),
@@ -319,7 +330,7 @@ class DriveApiClient(private val db: MobileStateDb) {
 
     fun downloadFile(remoteFileId: String, destOut: OutputStream) {
         val token = ensureAccessToken()
-        val conn = (URL("$DRIVE_API/files/${enc(remoteFileId)}?alt=media&supportsAllDrives=true").openConnection() as HttpURLConnection).apply {
+        val conn = openHttp("$DRIVE_API/files/${enc(remoteFileId)}?alt=media&supportsAllDrives=true").apply {
             requestMethod = "GET"
             connectTimeout = 20_000
             readTimeout = 60_000
@@ -599,8 +610,47 @@ class DriveApiClient(private val db: MobileStateDb) {
         return email to name
     }
 
+    private fun openHttp(urlStr: String): HttpURLConnection {
+        val url = URL(urlStr)
+        val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val activeNet = cm?.activeNetwork
+        if (activeNet != null) {
+            runCatching { activeNet.openConnection(url) as? HttpURLConnection }.getOrNull()?.let { return it }
+        }
+        return url.openConnection() as HttpURLConnection
+    }
+
+    private fun isTransientNetworkError(ex: Exception): Boolean =
+        ex is UnknownHostException ||
+            ex is ConnectException ||
+            ex is SocketException ||
+            ex is SocketTimeoutException
+
+    private fun <T> withNetworkRetry(block: () -> T): T {
+        var lastErr: Exception? = null
+        for (delayMs in RETRY_DELAYS_MS) {
+            if (delayMs > 0L) {
+                runCatching { Thread.sleep(delayMs) }
+            }
+            try {
+                return block()
+            } catch (ex: Exception) {
+                if (!isTransientNetworkError(ex)) throw ex
+                lastErr = ex
+            }
+        }
+        val msg = lastErr?.message.orEmpty()
+        if (lastErr is UnknownHostException) {
+            throw IllegalStateException(
+                "Sem acesso DNS/Internet no DriveSync ($msg). Verifique se o celular está conectado à internet e se os dados em segundo plano estão liberados para o app.",
+                lastErr
+            )
+        }
+        throw lastErr ?: IllegalStateException("Falha de conexão de rede.")
+    }
+
     private fun openConn(method: String, urlStr: String, token: String): HttpURLConnection {
-        val conn = URL(urlStr).openConnection() as HttpURLConnection
+        val conn = openHttp(urlStr)
         try {
             conn.requestMethod = method
         } catch (_: ProtocolException) {
@@ -615,42 +665,58 @@ class DriveApiClient(private val db: MobileStateDb) {
 
     private fun requestJson(method: String, urlStr: String, bodyJson: String? = null): JSONObject {
         val token = ensureAccessToken()
-        val conn = openConn(method, urlStr, token)
-        try {
-            if (bodyJson != null) {
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                conn.outputStream.use { it.write(bodyJson.toByteArray(StandardCharsets.UTF_8)) }
+        return withNetworkRetry {
+            val conn = openConn(method, urlStr, token)
+            try {
+                if (bodyJson != null) {
+                    conn.doOutput = true
+                    conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    conn.outputStream.use { it.write(bodyJson.toByteArray(StandardCharsets.UTF_8)) }
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    throw DriveApiException(code, readErrorText(conn, code))
+                }
+                val txt = conn.inputStream.bufferedReader().use { it.readText() }
+                if (txt.isBlank()) JSONObject() else JSONObject(txt)
+            } finally {
+                conn.disconnect()
             }
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                throw DriveApiException(code, readErrorText(conn, code))
+        }
+    }
+
+    private fun postTokenForm(encodedBody: String): JSONObject {
+        return try {
+            postForm(TOKEN_URL, encodedBody)
+        } catch (ex: Exception) {
+            if (ex is UnknownHostException || ex.cause is UnknownHostException || ex.message?.contains("Unable to resolve host") == true) {
+                postForm(TOKEN_URL_FALLBACK, encodedBody)
+            } else {
+                throw ex
             }
-            val txt = conn.inputStream.bufferedReader().use { it.readText() }
-            return if (txt.isBlank()) JSONObject() else JSONObject(txt)
-        } finally {
-            conn.disconnect()
         }
     }
 
     private fun postForm(urlStr: String, encodedBody: String): JSONObject {
-        val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = 20_000
-            readTimeout = 30_000
-            setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-        }
-        try {
-            conn.outputStream.use { it.write(encodedBody.toByteArray(StandardCharsets.UTF_8)) }
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                throw DriveApiException(code, readErrorText(conn, code))
+        return withNetworkRetry {
+            val conn = openHttp(urlStr).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 20_000
+                readTimeout = 30_000
+                setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
             }
-            val txt = conn.inputStream.bufferedReader().use { it.readText() }
-            return JSONObject(txt)
-        } finally {
-            conn.disconnect()
+            try {
+                conn.outputStream.use { it.write(encodedBody.toByteArray(StandardCharsets.UTF_8)) }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    throw DriveApiException(code, readErrorText(conn, code))
+                }
+                val txt = conn.inputStream.bufferedReader().use { it.readText() }
+                JSONObject(txt)
+            } finally {
+                conn.disconnect()
+            }
         }
     }
 

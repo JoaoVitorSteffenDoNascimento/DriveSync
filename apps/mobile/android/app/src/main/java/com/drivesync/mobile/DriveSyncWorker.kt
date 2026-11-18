@@ -46,7 +46,7 @@ class DriveSyncWorker(
             return Result.success()
         }
         return try {
-            val api = DriveApiClient(db)
+            val api = DriveApiClient(db, applicationContext)
             val engine = MobileSyncEngine(applicationContext, db, api)
             engine.syncAllFolders()
             Result.success()
