@@ -2,6 +2,13 @@
 
 Todas as alterações relevantes do **DriveSync** são documentadas neste arquivo seguindo os padrões [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e [Semantic Versioning 2.0.0](https://semver.org/lang/pt-BR/).
 
+## [0.3.0] - 2026-11-17
+
+### Melhorado
+- **Caminhos legíveis no Android e Desktop (`formatStoragePath`)**: URIs SAF internas (`content://com.android.externalstorage.documents/...`) são exibidas de forma clara (ex.: `Memória interna/Teste DriveSync/Teste`) em pílulas limpas nos cards, configurações e opções de pasta.
+- **Cabeçalho e grade de botões reorganizados**: eliminação dos 3 botões empilhados no topo (unificado em barra horizontal com `+ Conectar Pasta` e `Atualizar`) e grade 2x3 uniforme nos cards de pastas no Android, com texto resumido e sem poluição visual.
+- **Autenticação direta somente com Google Drive**: removidos campos e importadores manuais de chaves (`credentials.json`, `rclone.conf`, `Client ID`/`Secret`) das telas de login Mobile e Desktop, mantendo fallback silencioso no motor Go para execuções locais.
+
 ## [0.2.0] - 2026-11-17
 
 ### Adicionado

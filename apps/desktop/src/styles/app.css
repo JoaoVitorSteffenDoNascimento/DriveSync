@@ -342,6 +342,30 @@ select {
   color: var(--text-muted);
 }
 
+.folder-path-pill {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: var(--surface-muted);
+  font-size: 12.5px;
+  color: var(--text);
+  margin-top: 10px;
+  word-break: break-word;
+}
+
+.folder-summary-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
 .folder-actions {
   display: flex;
   flex-wrap: wrap;

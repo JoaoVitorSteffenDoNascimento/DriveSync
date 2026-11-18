@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { FolderOpen, Trash2, X } from 'lucide-react';
-import type {
-  LocalDeletePolicy,
-  RemoteDeletePolicy,
-  SyncDirection,
-  SyncFolderConfig,
+import {
+  formatStoragePath,
+  type LocalDeletePolicy,
+  type RemoteDeletePolicy,
+  type SyncDirection,
+  type SyncFolderConfig,
 } from '@drivesync/shared';
 import type { DriveSyncNativePlugin } from '../native/driveSyncNative';
 
@@ -89,8 +90,8 @@ export const MobileFolderSettingsSheet: React.FC<Props> = ({
 
         <div className="form-group">
           <label className="form-label">Pasta no celular onde os arquivos ficam salvos</label>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-            {localLabel || localPath}
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+            {localLabel || formatStoragePath(localPath)}
           </div>
           <button
             type="button"

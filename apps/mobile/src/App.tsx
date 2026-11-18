@@ -12,7 +12,6 @@ import {
   FilePlus2,
   FolderOpen,
   FolderSync,
-  KeyRound,
   Laptop,
   Lock,
   LogOut,
@@ -34,6 +33,7 @@ import {
 import {
   APP_VERSION,
   formatBytes,
+  formatStoragePath,
   normalizeEmail,
   type DiscoveredRemoteFolder,
   type FolderRuntimeState,
@@ -46,7 +46,6 @@ import {
   type DriveSyncNativePlugin,
   type MobileSettings,
   type MobileSnapshot,
-  type OAuthClientStatus,
 } from './native/driveSyncNative';
 import { MobileAuthSheet } from './components/MobileAuthSheet';
 import { MobileConnectSheet } from './components/MobileConnectSheet';
@@ -112,7 +111,6 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
   bridge = mobileBridge,
 }) => {
   const [snap, setSnap] = useState<MobileSnapshot | null>(null);
-  const [oauthStatus, setOauthStatus] = useState<OAuthClientStatus | null>(null);
   const [tab, setTab] = useState<Tab>('folders');
   const [activitySubTab, setActivitySubTab] = useState<ActivitySubTab>('recent');
   const [error, setError] = useState<string | null>(null);
@@ -131,10 +129,6 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
       const next = await bridge.getSnapshot();
       setSnap(next);
       setError(null);
-      bridge
-        .getOAuthStatus()
-        .then(setOauthStatus)
-        .catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -217,11 +211,12 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
 
   const handleSyncAll = async () => {
     setError(null);
+    await handleDiscoverFromCloud();
     const activeFolders = snap.folders.filter((f) => !f.paused);
     for (const f of activeFolders) {
       await bridge.syncNow({ folderId: f.id }).catch(() => {});
     }
-    setNotice('Sincronização iniciada para todas as pastas ativas.');
+    setNotice('Lista de pastas e sincronização atualizadas.');
     await refresh();
   };
 
@@ -301,28 +296,14 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
 
         {tab === 'folders' && (
           <div>
-            <div className="row-between" style={{ marginBottom: 4 }}>
-              <h1 style={{ margin: 0, fontSize: 19 }}>Suas Pastas Conectadas</h1>
-              <div className="row-gap">
-                {snap.account.connected && (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    disabled={loadingDiscovered}
-                    onClick={() => void handleDiscoverFromCloud()}
-                  >
-                    <CloudDownload size={14} /> {loadingDiscovered ? 'Buscando...' : 'Buscar da nuvem'}
-                  </button>
-                )}
-                {snap.account.connected && snap.folders.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={() => void handleSyncAll()}
-                  >
-                    <RefreshCw size={14} /> Sincronizar tudo
-                  </button>
-                )}
+            <div className="section-header">
+              <div>
+                <h1 style={{ margin: 0, fontSize: 19 }}>Suas Pastas Conectadas</h1>
+                <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+                  Espelhe pastas do celular com seu Google Drive ou um Drive Master.
+                </p>
+              </div>
+              <div className="header-toolbar">
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
@@ -330,11 +311,18 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                 >
                   <Plus size={15} /> Conectar Pasta
                 </button>
+                {snap.account.connected && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={loadingDiscovered}
+                    onClick={() => void handleSyncAll()}
+                  >
+                    <RefreshCw size={14} /> {loadingDiscovered ? 'Atualizando...' : 'Atualizar'}
+                  </button>
+                )}
               </div>
             </div>
-            <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-muted)' }}>
-              Escolha pastas do celular para espelhar com seu Google Drive ou um Drive Master da equipe.
-            </p>
 
             {!snap.account.connected && (
               <div className="card" style={{ textAlign: 'center', padding: 24 }}>
@@ -473,31 +461,33 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                     {renderStatusBadge(f.paused, rt)}
                   </div>
 
-                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    <div style={{ wordBreak: 'break-all' }}>
-                      <strong>Celular:</strong> {f.localPath} ↔ <strong>Drive:</strong> {f.remoteFolderName}
-                    </div>
-                    <div>
-                      <strong>Modo:</strong> {f.direction === 'receive_only' ? 'Somente receber' : 'Enviar e receber'} •{' '}
-                      <strong>Apagar no Drive:</strong>{' '}
-                      {f.onRemoteDelete === 'keep_local'
-                        ? 'Mantém no celular (não apaga)'
-                        : 'Move para Quarentena local'}
-                    </div>
-                    {f.kind === 'master' && (
-                      <div>
-                        <strong>Remetentes:</strong> {describeSenderPolicy(f)}
-                      </div>
-                    )}
-                    {rt?.message && (
-                      <div>
-                        <strong>Status:</strong> {rt.message}
-                        {rt.syncedFilesCount ? ` • ${rt.syncedFilesCount} arquivo(s) acompanhado(s)` : ''}
-                        {rt.keptLocalCount
-                          ? ` • ${rt.keptLocalCount} mantido(s) no celular após exclusão no Drive`
-                          : ''}
-                      </div>
-                    )}
+                  <div className="folder-path-pill">
+                    <span><strong>Celular:</strong> {formatStoragePath(f.localPath)}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>↔</span>
+                    <span><strong>Drive:</strong> {f.remoteFolderName}</span>
+                  </div>
+                  <div className="folder-summary-line">
+                    <span>{f.direction === 'receive_only' ? 'Somente receber' : 'Enviar e receber'}</span>
+                    <span>•</span>
+                    <span>{f.onRemoteDelete === 'keep_local' ? 'Mantém no celular' : 'Quarentena local'}</span>
+                    {f.kind === 'master' ? (
+                      <>
+                        <span>•</span>
+                        <span>{describeSenderPolicy(f)}</span>
+                      </>
+                    ) : null}
+                    {rt?.syncedFilesCount ? (
+                      <>
+                        <span>•</span>
+                        <span>{rt.syncedFilesCount} arquivo(s)</span>
+                      </>
+                    ) : null}
+                    {rt?.message ? (
+                      <>
+                        <span>•</span>
+                        <span>{rt.message}</span>
+                      </>
+                    ) : null}
                   </div>
 
                   {rt?.status === 'syncing' && (
@@ -516,7 +506,7 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                     </div>
                   )}
 
-                  <div className="row-gap">
+                  <div className="folder-actions-grid">
                     <button
                       type="button"
                       className="btn btn-primary btn-sm"
@@ -556,7 +546,7 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                         }
                       }}
                     >
-                      <RefreshCw size={14} /> Sincronizar agora
+                      <RefreshCw size={14} /> Sincronizar
                     </button>
 
                     <button
@@ -577,7 +567,7 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
                     </button>
 
                     <button type="button" className="btn btn-sm" onClick={() => setShareFolder(f)}>
-                      <Share2 size={14} /> Código / Convidar
+                      <Share2 size={14} /> Convidar
                     </button>
 
                     <button type="button" className="btn btn-sm" onClick={() => setSettingsFolder(f)}>
@@ -614,7 +604,6 @@ export const MobileApp: React.FC<{ bridge?: DriveSyncNativePlugin }> = ({
           <MobileSettingsTab
             bridge={bridge}
             snap={snap}
-            oauthStatus={oauthStatus}
             onOpenAuth={() => setShowAuthModal(true)}
             onRefresh={refresh}
             onNotice={setNotice}
@@ -1099,12 +1088,11 @@ const MobileActivityTab: React.FC<{
 const MobileSettingsTab: React.FC<{
   bridge: DriveSyncNativePlugin;
   snap: MobileSnapshot;
-  oauthStatus: OAuthClientStatus | null;
   onOpenAuth: () => void;
   onRefresh: () => Promise<void>;
   onNotice: (msg: string | null) => void;
   onError: (msg: string | null) => void;
-}> = ({ bridge, snap, oauthStatus, onOpenAuth, onRefresh, onNotice, onError }) => {
+}> = ({ bridge, snap, onOpenAuth, onRefresh, onNotice, onError }) => {
   const [form, setForm] = useState<MobileSettings>(snap.settings);
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
@@ -1140,43 +1128,23 @@ const MobileSettingsTab: React.FC<{
     <div>
       <h1 style={{ margin: '0 0 4px', fontSize: 19 }}>Configurações</h1>
       <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-muted)' }}>
-        Preferências do celular, conta Google Drive, chaves OAuth e regras padrão de segurança.
+        Preferências do celular, conta Google Drive e regras padrão de segurança.
       </p>
 
       <div className="card">
         <div className="row-between" style={{ alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <strong>Conta Google Drive & Chaves OAuth</strong>
+            <strong>Conta Google Drive</strong>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
               {snap.account.connected
                 ? `Conectado como ${snap.account.displayName || snap.account.email} (${snap.account.email})`
                 : 'Nenhuma conta conectada ainda.'}
             </div>
-            {snap.account.connected && (
-              <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
-                Método:{' '}
-                {snap.account.authSource === 'rclone_import'
-                  ? 'Importado de rclone.conf'
-                  : 'Login OAuth direto Google'}
-              </div>
-            )}
-            <div className="row-gap" style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>
-              <KeyRound size={12} />
-              <span>
-                {oauthStatus?.hasCustomClient
-                  ? `Chave OAuth personalizada ativa (${oauthStatus.maskedClientId})`
-                  : oauthStatus?.hasEmbeddedClient
-                    ? `Chave OAuth padrão embutida (${oauthStatus.maskedClientId})`
-                    : snap.account.hasCustomOAuthClient
-                      ? 'Chave OAuth configurada'
-                      : 'Nenhuma chave OAuth (credentials.json / rclone.conf) configurada'}
-              </span>
-            </div>
           </div>
 
           <div className="row-gap">
             <button type="button" className="btn btn-sm" onClick={onOpenAuth}>
-              {snap.account.connected ? 'Trocar conta / chaves' : 'Conectar conta / chaves'}
+              {snap.account.connected ? 'Trocar conta' : 'Conectar Google Drive'}
             </button>
             {snap.account.connected && (
               <button
@@ -1209,7 +1177,7 @@ const MobileSettingsTab: React.FC<{
             Pasta base onde novas pastas sincronizadas da sua conta serão salvas no celular
           </label>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-            {form.syncRootLabel || form.syncRootUri || 'Nenhuma pasta base selecionada ainda'}
+            {form.syncRootLabel || (form.syncRootUri ? formatStoragePath(form.syncRootUri) : 'Nenhuma pasta base selecionada ainda')}
           </div>
           <div className="row-gap" style={{ marginTop: 4 }}>
             <button

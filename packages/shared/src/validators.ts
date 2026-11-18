@@ -112,3 +112,56 @@ export function parseFolderCodeOrLink(raw: string): ParsedCodeInput {
 
   return { kind: 'invalid' };
 }
+
+/**
+ * Converte caminhos internos (como URIs SAF `content://...` do Android ou
+ * caminhos absolutos longos de PC) em uma trilha curta e legível para exibição.
+ */
+export function formatStoragePath(rawPath: string | undefined | null): string {
+  const input = (rawPath ?? '').trim();
+  if (!input) return 'Não definida';
+
+  if (input.startsWith('content://')) {
+    let decoded = input;
+    try {
+      decoded = decodeURIComponent(input);
+    } catch {
+      decoded = input;
+    }
+    const docIdx = decoded.lastIndexOf('/document/');
+    const treeIdx = decoded.lastIndexOf('/tree/');
+    let tail = '';
+    if (docIdx >= 0) {
+      tail = decoded.slice(docIdx + '/document/'.length);
+    } else if (treeIdx >= 0) {
+      tail = decoded.slice(treeIdx + '/tree/'.length);
+    } else {
+      tail = decoded.replace(/^content:\/\/[^/]+\//, '');
+    }
+    tail = tail.replace(/\/+$/, '');
+    if (tail.startsWith('primary:')) {
+      const sub = tail.slice('primary:'.length).replace(/^\/+/, '');
+      return sub ? `Memória interna/${sub}` : 'Memória interna';
+    }
+    if (tail.startsWith('home:')) {
+      const sub = tail.slice('home:'.length).replace(/^\/+/, '');
+      return sub ? `Documentos/${sub}` : 'Documentos';
+    }
+    const sdMatch = /^([0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}):(.*)$/.exec(tail);
+    if (sdMatch) {
+      const sub = sdMatch[2].replace(/^\/+/, '');
+      return sub ? `Cartão SD/${sub}` : 'Cartão SD';
+    }
+    return tail;
+  }
+
+  const linuxHome = /^\/home\/[^/]+(\/.*)?$/.exec(input);
+  if (linuxHome) {
+    return `~${linuxHome[1] || ''}`;
+  }
+  const winHome = /^[A-Za-z]:\\Users\\[^\\]+(\\.*)?$/.exec(input);
+  if (winHome) {
+    return `~${winHome[1] || ''}`;
+  }
+  return input;
+}

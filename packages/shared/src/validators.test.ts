@@ -4,6 +4,7 @@ import {
   MAX_UPLOAD_BYTES,
   computeAndroidVersionCode,
   formatBytes,
+  formatStoragePath,
   isSenderAllowed,
   isUploadWithinLimit,
   parseFolderCodeOrLink,
@@ -99,5 +100,15 @@ describe('regras compartilhadas DriveSync', () => {
     expect(computeAndroidVersionCode('0.2.0')).toBe(200);
     expect(computeAndroidVersionCode('1.2.3')).toBe(10203);
     expect(computeAndroidVersionCode(APP_VERSION)).toBeGreaterThanOrEqual(200);
+  });
+
+  it('formata URIs SAF do Android e caminhos de PC de forma limpa', () => {
+    expect(
+      formatStoragePath(
+        'content://com.android.externalstorage.documents/tree/primary%3ATeste%20DriveSync/document/primary%3ATeste%20DriveSync%2FTeste',
+      ),
+    ).toBe('Memória interna/Teste DriveSync/Teste');
+    expect(formatStoragePath('/home/brendha/Master')).toBe('~/Master');
+    expect(formatStoragePath('')).toBe('Não definida');
   });
 });

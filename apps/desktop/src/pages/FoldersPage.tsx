@@ -14,7 +14,7 @@ import {
   Share2,
 } from 'lucide-react';
 import type { DaemonSnapshot, DiscoveredRemoteFolder, SyncFolderConfig } from '@drivesync/shared';
-import { formatBytes } from '@drivesync/shared';
+import { formatBytes, formatStoragePath } from '@drivesync/shared';
 import type { DaemonClient } from '../api/daemonClient';
 import { FolderBrowserModal } from '../components/FolderBrowserModal';
 import { FolderSettingsModal } from '../components/FolderSettingsModal';
@@ -148,6 +148,16 @@ export const FoldersPage: React.FC<Props> = ({
     await onRefresh();
   };
 
+  const handleRefreshAll = async () => {
+    await loadDiscovered();
+    for (const folder of snapshot.folders) {
+      if (!folder.paused) {
+        await client.syncNow(folder.id).catch(() => {});
+      }
+    }
+    await onRefresh();
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -164,9 +174,9 @@ export const FoldersPage: React.FC<Props> = ({
               type="button"
               className="btn"
               disabled={loadingDiscovered}
-              onClick={() => void loadDiscovered()}
+              onClick={() => void handleRefreshAll()}
             >
-              <RefreshCw size={15} /> Buscar pastas da conta
+              <RefreshCw size={15} /> {loadingDiscovered ? 'Atualizando...' : 'Atualizar'}
             </button>
           )}
           <button
@@ -315,38 +325,46 @@ export const FoldersPage: React.FC<Props> = ({
                   </span>
                 </div>
 
-                <div className="folder-meta">
+                <div className="folder-path-pill">
+                  <span><strong>PC:</strong> {formatStoragePath(folder.localPath)}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>↔</span>
+                  <span><strong>Drive:</strong> {folder.remoteFolderName}</span>
+                </div>
+
+                <div className="folder-summary-line">
+                  <span>{folder.direction === 'receive_only' ? 'Somente receber' : 'Enviar e receber'}</span>
+                  <span>•</span>
                   <span>
-                    <strong>PC:</strong> {folder.localPath} ↔ <strong>Drive:</strong>{' '}
-                    {folder.remoteFolderName}
-                  </span>
-                  <span>
-                    <strong>Modo:</strong>{' '}
-                    {folder.direction === 'receive_only' ? 'Somente receber' : 'Enviar e receber'} •{' '}
-                    <strong>Apagar no Drive:</strong>{' '}
                     {folder.onRemoteDelete === 'keep_local'
-                      ? 'Mantém arquivos já baixados no PC'
-                      : 'Move para Quarentena local'}
+                      ? 'Mantém no PC'
+                      : 'Quarentena local'}
                   </span>
                   {folder.kind === 'master' && (
-                    <span>
-                      <strong>Remetentes:</strong>{' '}
-                      {folder.senderPolicy.mode === 'all'
-                        ? 'Recebendo de todos'
-                        : folder.senderPolicy.mode === 'allowlist'
-                          ? `Somente pessoas aprovadas (${folder.senderPolicy.rules.filter((r) => r.allowed).length})`
-                          : blockedSendersCount > 0
-                            ? `Todos, exceto ${blockedSendersCount} bloqueado(s)`
-                            : 'Recebendo de todos'}
-                    </span>
+                    <>
+                      <span>•</span>
+                      <span>
+                        {folder.senderPolicy.mode === 'all'
+                          ? 'Recebendo de todos'
+                          : folder.senderPolicy.mode === 'allowlist'
+                            ? `Somente pessoas aprovadas (${folder.senderPolicy.rules.filter((r) => r.allowed).length})`
+                            : blockedSendersCount > 0
+                              ? `Todos, exceto ${blockedSendersCount} bloqueado(s)`
+                              : 'Recebendo de todos'}
+                      </span>
+                    </>
                   )}
-                  {rt?.message && (
-                    <span>
-                      <strong>Status:</strong> {rt.message}
-                      {rt.syncedFilesCount ? ` • ${rt.syncedFilesCount} arquivo(s) acompanhado(s)` : ''}
-                      {rt.keptLocalCount ? ` • ${rt.keptLocalCount} mantido(s) no PC após exclusão no Drive` : ''}
-                    </span>
-                  )}
+                  {rt?.syncedFilesCount ? (
+                    <>
+                      <span>•</span>
+                      <span>{rt.syncedFilesCount} arquivo(s)</span>
+                    </>
+                  ) : null}
+                  {rt?.message ? (
+                    <>
+                      <span>•</span>
+                      <span>{rt.message}</span>
+                    </>
+                  ) : null}
                 </div>
               </div>
 

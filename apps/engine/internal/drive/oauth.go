@@ -256,6 +256,19 @@ func (a *AuthManager) ResolveOAuthClient() (string, string, error) {
 	if strings.TrimSpace(BuildGoogleClientID) != "" {
 		return strings.TrimSpace(BuildGoogleClientID), strings.TrimSpace(BuildGoogleClientSecret), nil
 	}
+	if confPath, err := defaultRcloneConfPath(); err == nil {
+		if rawBytes, err := os.ReadFile(confPath); err == nil {
+			sections := parseRcloneINI(string(rawBytes))
+			if gdrive, ok := sections["gdrive"]; ok && gdrive["type"] == "drive" && strings.TrimSpace(gdrive["client_id"]) != "" {
+				return strings.TrimSpace(gdrive["client_id"]), strings.TrimSpace(gdrive["client_secret"]), nil
+			}
+			for _, entry := range sections {
+				if entry["type"] == "drive" && strings.TrimSpace(entry["client_id"]) != "" {
+					return strings.TrimSpace(entry["client_id"]), strings.TrimSpace(entry["client_secret"]), nil
+				}
+			}
+		}
+	}
 	return "", "", ErrOAuthClientMissing
 }
 

@@ -318,7 +318,7 @@ describe('MobileApp', () => {
     expect(container.textContent).toContain('Iniciar DriveSync automaticamente ao ligar o celular');
   });
 
-  it('mostra seleção de credentials.json e importação de rclone.conf no celular', async () => {
+  it('abre modal limpo de login Google Drive sem expor chaves OAuth e inicia autenticação', async () => {
     vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
     const snap = makeSnapshot({
       account: {
@@ -344,20 +344,15 @@ describe('MobileApp', () => {
     });
     await act(async () => {});
 
-    expect(container.textContent).toContain('Colar texto do JSON');
-    expect(container.textContent).toContain('Aproveitar Client ID / token de rclone.conf');
-    const jsonBtn = findButton(container, 'Carregar arquivo credentials.json do Google Cloud');
-    expect(jsonBtn).toBeDefined();
+    expect(container.textContent).not.toContain('credentials.json');
+    expect(container.textContent).not.toContain('rclone.conf');
+    const googleBtn = findButton(container, 'Conectar com Google Drive');
+    expect(googleBtn).toBeDefined();
     await act(async () => {
-      jsonBtn?.click();
+      googleBtn?.click();
     });
-    expect(bridge.pickAndLoadOAuthJson).toHaveBeenCalledTimes(1);
-
-    const rcloneBtn = findButton(container, 'Aproveitar Client ID / token de rclone.conf');
-    await act(async () => {
-      rcloneBtn?.click();
-    });
-    expect(bridge.pickAndImportRcloneConf).toHaveBeenCalledTimes(1);
+    await act(async () => {});
+    expect(bridge.startGoogleOAuth).toHaveBeenCalledTimes(1);
   });
 
   it('mostra pastas descobertas da mesma conta Google e permite escolher onde salvar', async () => {
