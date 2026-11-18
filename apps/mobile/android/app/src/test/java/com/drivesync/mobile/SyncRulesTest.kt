@@ -1,5 +1,6 @@
 package com.drivesync.mobile
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -71,5 +72,32 @@ class SyncRulesTest {
         val creds = SyncRules.parseGoogleCredentialsJson(installedJson)
         assertEquals("123.apps.googleusercontent.com", creds.clientId)
         assertEquals("sec-abc", creds.clientSecret)
+    }
+
+    @Test
+    fun parsesRcloneConfDriveProfilesAndIntervalBounds() {
+        val ini = """
+            [gdrive]
+            type = drive
+            client_id = cid-123.apps.googleusercontent.com
+            client_secret = csec-xyz
+            token = {"access_token":"tok1","refresh_token":"ref1","token_type":"Bearer"}
+        """.trimIndent()
+        val parsed = SyncRules.parseRcloneConf(ini, "gdrive")
+        assertEquals("gdrive", parsed.remoteName)
+        assertEquals("cid-123.apps.googleusercontent.com", parsed.clientId)
+        assertEquals("csec-xyz", parsed.clientSecret)
+        assertTrue(parsed.rawTokenJson.contains("ref1"))
+
+        val autoDetected = SyncRules.parseRcloneConf(ini, "")
+        assertEquals("gdrive", autoDetected.remoteName)
+
+        val settings = MobileSettings.fromJson(
+            JSONObject("""{"pollIntervalSeconds":15,"startOnBoot":true}"""),
+            "dev-1",
+            "Celular"
+        )
+        assertEquals(15, settings.pollIntervalSeconds)
+        assertTrue(settings.startOnBoot)
     }
 }

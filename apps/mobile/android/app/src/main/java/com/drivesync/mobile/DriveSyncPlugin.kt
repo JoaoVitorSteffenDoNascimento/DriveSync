@@ -125,6 +125,92 @@ class DriveSyncPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun clearOAuthClient(call: PluginCall) {
+        executor.execute {
+            runCatching {
+                db.clearCustomOAuthClient()
+                toJSObject(db.getAccountInfo().toJson())
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Falha ao remover chave personalizada.") }
+        }
+    }
+
+    @PluginMethod
+    fun getOAuthStatus(call: PluginCall) {
+        executor.execute {
+            runCatching {
+                toJSObject(db.getOAuthClientStatusJson())
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Falha ao consultar chave OAuth.") }
+        }
+    }
+
+    @PluginMethod
+    fun importRcloneConf(call: PluginCall) {
+        val rawConf = call.getString("rawConf", "").orEmpty()
+        val remoteName = call.getString("remoteName", "")?.trim().orEmpty()
+        if (rawConf.isBlank()) {
+            call.reject("Cole o conteúdo do rclone.conf primeiro.")
+            return
+        }
+        executor.execute {
+            runCatching {
+                applyRcloneConfRaw(rawConf, remoteName)
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Não foi possível importar do rclone.conf.") }
+        }
+    }
+
+    @PluginMethod
+    fun pickAndImportRcloneConf(call: PluginCall) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+        }
+        startActivityForResult(call, intent, "onRcloneConfPicked")
+    }
+
+    @ActivityCallback
+    private fun onRcloneConfPicked(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        val remoteName = call.getString("remoteName", "")?.trim().orEmpty()
+        if (result.resultCode != Activity.RESULT_OK) {
+            call.reject("Seleção do arquivo rclone.conf cancelada.")
+            return
+        }
+        val uri = result.data?.data
+        if (uri == null) {
+            call.reject("Nenhum arquivo selecionado.")
+            return
+        }
+        executor.execute {
+            runCatching {
+                val rawConf = context.contentResolver.openInputStream(uri)?.use {
+                    it.bufferedReader(StandardCharsets.UTF_8).readText()
+                }.orEmpty()
+                require(rawConf.isNotBlank()) { "Arquivo rclone.conf vazio ou ilegível." }
+                applyRcloneConfRaw(rawConf, remoteName)
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Falha ao ler rclone.conf.") }
+        }
+    }
+
+    private fun applyRcloneConfRaw(rawConf: String, preferredRemote: String): JSObject {
+        val profile = SyncRules.parseRcloneConf(rawConf, preferredRemote)
+        val creds = OAuthClientCredentials(profile.clientId, profile.clientSecret)
+        db.saveCustomOAuthClient(creds)
+        if (profile.rawTokenJson.isNotBlank()) {
+            val token = api.exchangeRcloneToken(creds, profile.rawTokenJson)
+            db.saveToken(token)
+            val (email, displayName) = api.aboutUser()
+            db.saveAccountProfile(email, displayName)
+            db.saveAuthSource("rclone_import")
+            DriveSyncWorker.applySchedule(context, db.getSettings())
+        }
+        return toJSObject(db.getAccountInfo().toJson())
+    }
+
+    @PluginMethod
     fun cancelGoogleOAuth(call: PluginCall) {
         runCatching { activeAuthServer?.close() }
         activeAuthServer = null
@@ -156,6 +242,7 @@ class DriveSyncPlugin : Plugin() {
                     "response_type" to "code",
                     "scope" to DriveSyncConstants.GOOGLE_OAUTH_SCOPE,
                     "access_type" to "offline",
+                    "prompt" to "select_account consent",
                     "state" to state,
                     "include_granted_scopes" to "true"
                 )
@@ -257,6 +344,7 @@ class DriveSyncPlugin : Plugin() {
                 db.saveToken(token)
                 val (email, displayName) = api.aboutUser()
                 db.saveAccountProfile(email, displayName)
+                db.saveAuthSource("oauth_pkce")
                 DriveSyncWorker.applySchedule(context, db.getSettings())
                 call.resolve(toJSObject(db.getAccountInfo().toJson()))
             } catch (ex: Exception) {
@@ -370,6 +458,98 @@ class DriveSyncPlugin : Plugin() {
                 }
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Erro ao importar arquivos.") }
+        }
+    }
+
+    @PluginMethod
+    fun pickAndImportFolder(call: PluginCall) {
+        val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        if (folderId.isBlank()) {
+            call.reject("Informe o ID da pasta sincronizada.")
+            return
+        }
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivityForResult(call, intent, "onImportFolderPicked")
+    }
+
+    @ActivityCallback
+    private fun onImportFolderPicked(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        val subpath = call.getString("subpath", "")?.trim().orEmpty()
+        if (result.resultCode != Activity.RESULT_OK || result.data?.data == null) {
+            call.resolve(JSObject().apply {
+                put("addedCount", 0)
+                put("skippedOver4GB", JSArray())
+                put("errors", JSArray())
+            })
+            return
+        }
+        val treeUri = result.data!!.data!!
+        executor.execute {
+            runCatching {
+                val (added, skipped) = engine.importDirectoryTree(folderId, subpath, treeUri)
+                if (added > 0) {
+                    executor.execute { runCatching { engine.syncAllFolders(folderId) } }
+                }
+                JSObject().apply {
+                    put("addedCount", added)
+                    put("skippedOver4GB", JSArray().apply { skipped.forEach { put(it) } })
+                    put("errors", JSArray())
+                }
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Erro ao importar pasta.") }
+        }
+    }
+
+    @PluginMethod
+    fun openLocalItem(call: PluginCall) {
+        val folderId = call.getString("folderId", "")?.trim().orEmpty()
+        val relativePath = call.getString("relativePath", "")?.trim().orEmpty()
+        val directUri = call.getString("uri", "")?.trim().orEmpty()
+        executor.execute {
+            runCatching {
+                val targetDoc: DocumentFile? = when {
+                    directUri.isNotBlank() -> {
+                        val parsed = Uri.parse(directUri)
+                        if (directUri.contains("/tree/")) {
+                            DocumentFile.fromTreeUri(context, parsed)
+                        } else {
+                            DocumentFile.fromSingleUri(context, parsed)
+                        }
+                    }
+                    folderId.isNotBlank() -> {
+                        val folder = db.getFolder(folderId)
+                            ?: throw IllegalArgumentException("Pasta sincronizada não encontrada.")
+                        var doc: DocumentFile? = DocumentFile.fromTreeUri(context, Uri.parse(folder.localPath))
+                        if (relativePath.isNotBlank()) {
+                            for (seg in relativePath.split('/').filter { it.isNotBlank() }) {
+                                doc = doc?.findFile(seg)
+                            }
+                        }
+                        doc
+                    }
+                    else -> null
+                }
+                if (targetDoc == null || !targetDoc.exists()) {
+                    throw IllegalStateException("Arquivo ou pasta não encontrado no celular.")
+                }
+                val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(
+                        targetDoc.uri,
+                        if (targetDoc.isDirectory) "vnd.android.document/directory"
+                        else (targetDoc.type ?: "*/*")
+                    )
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(viewIntent, "Abrir com").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+                JSObject().apply { put("ok", true) }
+            }.onSuccess { call.resolve(it) }
+                .onFailure { call.reject(it.message ?: "Nenhum aplicativo disponível para abrir este item.") }
         }
     }
 
@@ -540,6 +720,7 @@ class DriveSyncPlugin : Plugin() {
                 )
                 val saved = db.upsertFolder(cfg)
                 DriveSyncWorker.applySchedule(context, db.getSettings())
+                executor.execute { runCatching { engine.syncAllFolders(saved.id) } }
                 toJSObject(saved.toJson())
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Erro ao adicionar pasta.") }
@@ -557,7 +738,11 @@ class DriveSyncPlugin : Plugin() {
             runCatching {
                 val parsed = SyncFolderConfig.fromJson(JSONObject(folderObj.toString()))
                 require(parsed.id.isNotBlank()) { "ID da pasta inválido." }
+                val previous = db.getFolder(parsed.id)
                 val saved = db.upsertFolder(parsed)
+                if (previous != null && previous.paused && !saved.paused) {
+                    executor.execute { runCatching { engine.syncAllFolders(saved.id) } }
+                }
                 toJSObject(saved.toJson())
             }.onSuccess { call.resolve(it) }
                 .onFailure { call.reject(it.message ?: "Erro ao atualizar pasta.") }

@@ -28,16 +28,29 @@ export interface PickedMobileFolder {
   displayName: string;
 }
 
+export interface OAuthClientStatus {
+  hasEffectiveClient: boolean;
+  hasCustomClient: boolean;
+  hasEmbeddedClient: boolean;
+  maskedClientId: string;
+}
+
 export interface DriveSyncNativePlugin {
   getSnapshot(): Promise<MobileSnapshot>;
+  getOAuthStatus(): Promise<OAuthClientStatus>;
   saveOAuthClient(options: { clientId: string; clientSecret: string }): Promise<AccountInfo>;
+  clearOAuthClient(): Promise<AccountInfo>;
   uploadGoogleOAuthJson(options: { rawJson: string }): Promise<AccountInfo>;
   pickAndLoadOAuthJson(): Promise<AccountInfo>;
+  importRcloneConf(options: { rawConf: string; remoteName?: string }): Promise<AccountInfo>;
+  pickAndImportRcloneConf(options: { remoteName?: string }): Promise<AccountInfo>;
   startGoogleOAuth(): Promise<AccountInfo>;
   cancelGoogleOAuth(): Promise<{ ok: boolean }>;
   disconnectAccount(): Promise<{ ok: boolean }>;
   pickLocalFolder(): Promise<PickedMobileFolder>;
   pickAndImportFiles(options: { folderId: string; subpath?: string }): Promise<ImportPathsResult>;
+  pickAndImportFolder(options: { folderId: string; subpath?: string }): Promise<ImportPathsResult>;
+  openLocalItem(options: { folderId?: string; relativePath?: string; uri?: string }): Promise<{ ok: boolean }>;
   listFolderContents(options: { folderId: string; subpath: string }): Promise<FolderContentsResponse>;
   createSubfolder(options: { folderId: string; subpath: string; name: string }): Promise<{ ok: boolean }>;
   listDriveFolders(options: { parentId: string; shared: boolean }): Promise<{ items: RemoteFolderItem[] }>;
@@ -95,8 +108,20 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       async getSnapshot() {
         return structuredClone(previewState);
       },
+      async getOAuthStatus() {
+        return {
+          hasEffectiveClient: previewState.account.hasCustomOAuthClient,
+          hasCustomClient: previewState.account.hasCustomOAuthClient,
+          hasEmbeddedClient: false,
+          maskedClientId: previewState.account.hasCustomOAuthClient ? 'preview-id…googleusercontent.com' : '',
+        };
+      },
       async saveOAuthClient({ clientId }) {
         previewState.account.hasCustomOAuthClient = Boolean(clientId.trim());
+        return previewState.account;
+      },
+      async clearOAuthClient() {
+        previewState.account.hasCustomOAuthClient = false;
         return previewState.account;
       },
       async uploadGoogleOAuthJson() {
@@ -105,6 +130,26 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       },
       async pickAndLoadOAuthJson() {
         previewState.account.hasCustomOAuthClient = true;
+        return previewState.account;
+      },
+      async importRcloneConf() {
+        previewState.account = {
+          connected: true,
+          email: 'preview@gmail.com',
+          displayName: 'Preview Rclone',
+          authSource: 'rclone_import',
+          hasCustomOAuthClient: true,
+        };
+        return previewState.account;
+      },
+      async pickAndImportRcloneConf() {
+        previewState.account = {
+          connected: true,
+          email: 'preview@gmail.com',
+          displayName: 'Preview Rclone',
+          authSource: 'rclone_import',
+          hasCustomOAuthClient: true,
+        };
         return previewState.account;
       },
       async startGoogleOAuth() {
@@ -135,6 +180,12 @@ export const mobileBridge: DriveSyncNativePlugin = Capacitor.isNativePlatform()
       },
       async pickAndImportFiles() {
         return { addedCount: 0, skippedOver4GB: [], errors: [] };
+      },
+      async pickAndImportFolder() {
+        return { addedCount: 0, skippedOver4GB: [], errors: [] };
+      },
+      async openLocalItem() {
+        return { ok: true };
       },
       async listFolderContents({ folderId, subpath }) {
         return {

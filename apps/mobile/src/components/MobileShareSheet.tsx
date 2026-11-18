@@ -78,9 +78,9 @@ export const MobileShareSheet: React.FC<Props> = ({ bridge, folder, onClose }) =
                   </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: 0 }}>
+                <div className="form-group">
                   <label className="form-label">
-                    <KeyRound size={13} style={{ verticalAlign: 'middle' }} /> Código Curto
+                    <KeyRound size={13} style={{ verticalAlign: 'middle' }} /> Código Curto (quem já tem acesso Google)
                   </label>
                   <div className="row-gap">
                     <input className="input" style={{ flex: 1 }} readOnly value={invite.shortCode} />
@@ -91,6 +91,21 @@ export const MobileShareSheet: React.FC<Props> = ({ bridge, folder, onClose }) =
                     >
                       {copiedKey === 'short' ? <Check size={14} /> : <Copy size={14} />}
                       {copiedKey === 'short' ? 'Copiado' : 'Copiar'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Link direto da pasta no Google Drive</label>
+                  <div className="row-gap">
+                    <input className="input" style={{ flex: 1 }} readOnly value={invite.driveUrl} />
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => void copyText('url', invite.driveUrl)}
+                    >
+                      {copiedKey === 'url' ? <Check size={14} /> : <Copy size={14} />}
+                      {copiedKey === 'url' ? 'Copiado' : 'Copiar'}
                     </button>
                   </div>
                 </div>

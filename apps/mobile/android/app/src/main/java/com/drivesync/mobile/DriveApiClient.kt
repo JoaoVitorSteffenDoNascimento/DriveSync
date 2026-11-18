@@ -96,6 +96,40 @@ class DriveApiClient(private val db: MobileStateDb) {
         return refreshed.accessToken
     }
 
+    fun exchangeRcloneToken(creds: OAuthClientCredentials, rawTokenJson: String): StoredToken {
+        val tokObj = JSONObject(rawTokenJson)
+        val refreshToken = tokObj.optString("refresh_token", "").trim()
+        val existingAccess = tokObj.optString("access_token", "").trim()
+        val tokenType = tokObj.optString("token_type", "Bearer").ifBlank { "Bearer" }
+        if (refreshToken.isNotBlank()) {
+            val params = linkedMapOf(
+                "client_id" to creds.clientId,
+                "refresh_token" to refreshToken,
+                "grant_type" to "refresh_token"
+            )
+            if (creds.clientSecret.isNotBlank()) {
+                params["client_secret"] = creds.clientSecret
+            }
+            val obj = postForm(TOKEN_URL, formEncode(params))
+            val expiresIn = obj.optLong("expires_in", 3600L)
+            return StoredToken(
+                accessToken = obj.getString("access_token"),
+                refreshToken = obj.optString("refresh_token", refreshToken).ifBlank { refreshToken },
+                expiryEpochMs = System.currentTimeMillis() + expiresIn * 1000L,
+                tokenType = obj.optString("token_type", tokenType)
+            )
+        }
+        if (existingAccess.isNotBlank()) {
+            return StoredToken(
+                accessToken = existingAccess,
+                refreshToken = "",
+                expiryEpochMs = System.currentTimeMillis() + 300_000L,
+                tokenType = tokenType
+            )
+        }
+        throw IllegalArgumentException("O campo 'token' do rclone.conf não possui access_token ou refresh_token válido.")
+    }
+
     fun aboutUser(): Pair<String, String> {
         val obj = requestJson("GET", "$DRIVE_API/about?fields=user(emailAddress,displayName)")
         val user = obj.optJSONObject("user") ?: JSONObject()

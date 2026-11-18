@@ -55,6 +55,13 @@ data class OAuthClientCredentials(
     val clientSecret: String
 )
 
+data class RcloneParsedProfile(
+    val remoteName: String,
+    val clientId: String,
+    val clientSecret: String,
+    val rawTokenJson: String
+)
+
 data class StoredToken(
     val accessToken: String,
     val refreshToken: String,
@@ -94,7 +101,7 @@ data class MobileSettings(
         put("deviceId", deviceId)
         put("deviceName", deviceName)
         put("maxUploadBytes", DriveSyncConstants.MAX_UPLOAD_BYTES)
-        put("pollIntervalSeconds", pollIntervalSeconds.coerceIn(60, 86400))
+        put("pollIntervalSeconds", pollIntervalSeconds.coerceIn(15, 3600))
         put("startOnBoot", startOnBoot)
         put("minimizeToTray", minimizeToTray)
         put("enableWaybarBridge", false)
@@ -109,7 +116,7 @@ data class MobileSettings(
                 deviceId = obj.optString("deviceId", fallbackDeviceId).ifBlank { fallbackDeviceId },
                 deviceName = obj.optString("deviceName", fallbackDeviceName).ifBlank { fallbackDeviceName },
                 maxUploadBytes = DriveSyncConstants.MAX_UPLOAD_BYTES,
-                pollIntervalSeconds = obj.optInt("pollIntervalSeconds", 900).coerceIn(60, 86400),
+                pollIntervalSeconds = obj.optInt("pollIntervalSeconds", 900).coerceIn(15, 3600),
                 startOnBoot = obj.optBoolean("startOnBoot", true),
                 minimizeToTray = obj.optBoolean("minimizeToTray", false),
                 enableWaybarBridge = false,
@@ -509,5 +516,57 @@ object SyncRules {
             throw IllegalArgumentException("Arquivo credentials.json sem campo client_id válido.")
         }
         return OAuthClientCredentials(clientId = clientId, clientSecret = clientSecret)
+    }
+
+    fun parseRcloneConf(rawConf: String, preferredRemote: String = ""): RcloneParsedProfile {
+        val sections = linkedMapOf<String, MutableMap<String, String>>()
+        var current = ""
+        for (rawLine in rawConf.lineSequence()) {
+            val line = rawLine.trim()
+            if (line.isEmpty() || line.startsWith("#") || line.startsWith(";")) continue
+            if (line.startsWith("[") && line.endsWith("]") && line.length > 2) {
+                current = line.substring(1, line.length - 1).trim()
+                sections.getOrPut(current) { linkedMapOf() }
+                continue
+            }
+            if (current.isEmpty()) continue
+            val eqIdx = line.indexOf('=')
+            if (eqIdx > 0) {
+                val key = line.substring(0, eqIdx).trim()
+                val value = line.substring(eqIdx + 1).trim()
+                sections[current]?.put(key, value)
+            }
+        }
+
+        val cleanPreferred = preferredRemote.trim().removeSuffix(":")
+        val chosenName = when {
+            cleanPreferred.isNotEmpty() && sections.containsKey(cleanPreferred) -> cleanPreferred
+            cleanPreferred.isNotEmpty() -> throw IllegalArgumentException("Perfil '[$cleanPreferred]' não encontrado no rclone.conf.")
+            sections.containsKey("gdrive") -> "gdrive"
+            else -> sections.entries.firstOrNull { it.value["type"] == "drive" }?.key
+                ?: sections.keys.firstOrNull()
+                ?: throw IllegalArgumentException("Nenhuma seção [nome] encontrada no rclone.conf.")
+        }
+
+        val entry = sections[chosenName]
+            ?: throw IllegalArgumentException("Perfil '[$chosenName]' não encontrado no rclone.conf.")
+        val remoteType = entry["type"].orEmpty().trim()
+        if (remoteType.isNotEmpty() && remoteType != "drive") {
+            throw IllegalArgumentException("Perfil '$chosenName' não é do tipo Google Drive (type=$remoteType).")
+        }
+
+        val clientId = entry["client_id"].orEmpty().trim()
+        val clientSecret = entry["client_secret"].orEmpty().trim()
+        val rawTokenJson = entry["token"].orEmpty().trim()
+        if (clientId.isEmpty()) {
+            throw IllegalArgumentException("O perfil '[$chosenName]' não possui client_id próprio no rclone.conf.")
+        }
+
+        return RcloneParsedProfile(
+            remoteName = chosenName,
+            clientId = clientId,
+            clientSecret = clientSecret,
+            rawTokenJson = rawTokenJson
+        )
     }
 }

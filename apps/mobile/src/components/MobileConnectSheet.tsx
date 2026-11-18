@@ -263,6 +263,11 @@ export const MobileConnectSheet: React.FC<Props> = ({
               </div>
             )}
 
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Nome fácil para esta conexão</label>
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+
             <div className="row-between" style={{ marginTop: 16 }}>
               <span />
               <button
@@ -394,7 +399,10 @@ export const MobileConnectSheet: React.FC<Props> = ({
                           onClick={() => setRemoteFolder(item)}
                         >
                           <Folder size={16} color="var(--primary)" />
-                          <span>{item.name}</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                            {item.ownerName || item.ownerEmail || (item.canWrite ? 'Leitura e escrita' : 'Somente leitura')}
+                          </span>
                         </button>
                         {driveTab === 'my_drive' && (
                           <button
@@ -493,41 +501,47 @@ export const MobileConnectSheet: React.FC<Props> = ({
                   </select>
                 </div>
 
-                {senderMode === 'blocklist' && (
-                  <div className="form-group">
-                    <label className="form-label">Pessoas novas desconhecidas</label>
-                    <select
-                      className="select"
-                      value={unknownSenderAction}
-                      onChange={(e) => setUnknownSenderAction(e.target.value as 'allow' | 'block')}
-                    >
-                      <option value="allow">Receber até eu bloquear</option>
-                      <option value="block">Ignorar até eu aprovar</option>
-                    </select>
-                  </div>
+                {senderMode !== 'all' && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Se o Drive não identificar o remetente</label>
+                      <select
+                        className="select"
+                        value={unknownSenderAction}
+                        onChange={(e) => setUnknownSenderAction(e.target.value as 'allow' | 'block')}
+                      >
+                        <option value="allow">Permitir download</option>
+                        <option value="block">Bloquear por segurança</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">E-mails aceitos inicialmente (opcional)</label>
+                      <input
+                        className="input"
+                        placeholder="joao@gmail.com, maria@gmail.com"
+                        value={allowedEmails}
+                        onChange={(e) => setAllowedEmails(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">E-mails bloqueados inicialmente (opcional)</label>
+                      <input
+                        className="input"
+                        placeholder="luiz@gmail.com"
+                        value={blockedEmails}
+                        onChange={(e) => setBlockedEmails(e.target.value)}
+                      />
+                    </div>
+                  </>
                 )}
-
-                <div className="form-group">
-                  <label className="form-label">E-mails aceitos inicialmente (opcional)</label>
-                  <input
-                    className="input"
-                    placeholder="joao@gmail.com, maria@gmail.com"
-                    value={allowedEmails}
-                    onChange={(e) => setAllowedEmails(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">E-mails bloqueados inicialmente (opcional)</label>
-                  <input
-                    className="input"
-                    placeholder="luiz@gmail.com"
-                    value={blockedEmails}
-                    onChange={(e) => setBlockedEmails(e.target.value)}
-                  />
-                </div>
               </>
             )}
+
+            <div className="alert" style={{ marginTop: 10 }}>
+              Limite ativo: uploads individuais maiores que <strong>4 GB</strong> serão bloqueados automaticamente.
+            </div>
 
             <div className="row-between" style={{ marginTop: 14 }}>
               <button type="button" className="btn btn-sm" onClick={() => setStep(2)}>

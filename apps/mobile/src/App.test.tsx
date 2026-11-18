@@ -130,14 +130,25 @@ function makeSnapshot(overrides: Partial<MobileSnapshot> = {}): MobileSnapshot {
 function makeMockBridge(snap: MobileSnapshot): DriveSyncNativePlugin {
   return {
     getSnapshot: vi.fn().mockResolvedValue(snap),
+    getOAuthStatus: vi.fn().mockResolvedValue({
+      hasEffectiveClient: snap.account.hasCustomOAuthClient,
+      hasCustomClient: snap.account.hasCustomOAuthClient,
+      hasEmbeddedClient: false,
+      maskedClientId: snap.account.hasCustomOAuthClient ? '123456…googleusercontent.com' : '',
+    }),
     saveOAuthClient: vi.fn().mockResolvedValue(snap.account),
+    clearOAuthClient: vi.fn().mockResolvedValue(snap.account),
     uploadGoogleOAuthJson: vi.fn().mockResolvedValue(snap.account),
     pickAndLoadOAuthJson: vi.fn().mockResolvedValue(snap.account),
+    importRcloneConf: vi.fn().mockResolvedValue(snap.account),
+    pickAndImportRcloneConf: vi.fn().mockResolvedValue(snap.account),
     startGoogleOAuth: vi.fn().mockResolvedValue(snap.account),
     cancelGoogleOAuth: vi.fn().mockResolvedValue({ ok: true }),
     disconnectAccount: vi.fn().mockResolvedValue({ ok: true }),
     pickLocalFolder: vi.fn().mockResolvedValue({ uri: 'content://mock/tree/Nova', displayName: 'Nova' }),
     pickAndImportFiles: vi.fn().mockResolvedValue({ addedCount: 1, skippedOver4GB: [], errors: [] }),
+    pickAndImportFolder: vi.fn().mockResolvedValue({ addedCount: 3, skippedOver4GB: [], errors: [] }),
+    openLocalItem: vi.fn().mockResolvedValue({ ok: true }),
     listFolderContents: vi.fn().mockResolvedValue({
       folderId: 'folder-1',
       folderName: 'Drive Master Equipe',
@@ -234,7 +245,7 @@ describe('MobileApp', () => {
       }),
     );
 
-    // Abrir navegador de arquivos da pasta
+    // Abrir navegador de arquivos da pasta e importar subpasta inteira
     const openBtn = findButton(container, 'Abrir pasta');
     await act(async () => {
       openBtn?.click();
@@ -242,6 +253,11 @@ describe('MobileApp', () => {
     await act(async () => {});
     expect(bridge.listFolderContents).toHaveBeenCalledWith({ folderId: 'folder-1', subpath: '' });
     expect(container.textContent).toContain('contrato.pdf');
+    const addFolderBtn = findButton(container, 'Adicionar Pasta');
+    await act(async () => {
+      addFolderBtn?.click();
+    });
+    expect(bridge.pickAndImportFolder).toHaveBeenCalledWith({ folderId: 'folder-1', subpath: '' });
     await act(async () => {
       container.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]')?.click();
     });
@@ -281,19 +297,20 @@ describe('MobileApp', () => {
       deviceId: 'dev-pc',
     });
 
-    // Aba Ajustes: compartilhamento, intervalo e trava 4,00 GB
+    // Aba Configurações: compartilhamento, boot, segundos e trava 4,00 GB
     const settingsTab = Array.from(
       container.querySelectorAll<HTMLButtonElement>('button.bottom-tab'),
-    ).find((b) => b.textContent?.includes('Ajustes'));
+    ).find((b) => b.textContent?.includes('Configurações'));
     await act(async () => {
       settingsTab?.click();
     });
     expect(container.textContent).toContain('Copiar link de download do app');
     expect(container.textContent).toContain('4,00 GB');
-    expect(container.textContent).toContain('Intervalo da sincronização automática');
+    expect(container.textContent).toContain('Intervalo de checagem de novidades no Drive (segundos)');
+    expect(container.textContent).toContain('Iniciar DriveSync automaticamente ao ligar o celular');
   });
 
-  it('mostra seleção de credentials.json no celular quando não há OAuth embutido', async () => {
+  it('mostra seleção de credentials.json e importação de rclone.conf no celular', async () => {
     vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
     const snap = makeSnapshot({
       account: {
@@ -317,13 +334,21 @@ describe('MobileApp', () => {
     await act(async () => {
       loginBtn?.click();
     });
+    await act(async () => {});
 
     expect(container.textContent).toContain('Colar texto do JSON');
-    const jsonBtn = findButton(container, 'Selecionar arquivo credentials.json');
+    expect(container.textContent).toContain('Aproveitar Client ID / token de rclone.conf');
+    const jsonBtn = findButton(container, 'Carregar arquivo credentials.json do Google Cloud');
     expect(jsonBtn).toBeDefined();
     await act(async () => {
       jsonBtn?.click();
     });
     expect(bridge.pickAndLoadOAuthJson).toHaveBeenCalledTimes(1);
+
+    const rcloneBtn = findButton(container, 'Aproveitar Client ID / token de rclone.conf');
+    await act(async () => {
+      rcloneBtn?.click();
+    });
+    expect(bridge.pickAndImportRcloneConf).toHaveBeenCalledTimes(1);
   });
 });

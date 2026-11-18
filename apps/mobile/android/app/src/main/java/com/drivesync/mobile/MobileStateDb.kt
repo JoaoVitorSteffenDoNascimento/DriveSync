@@ -19,6 +19,7 @@ class MobileStateDb(context: Context) :
         private const val KV_OAUTH_CLIENT = "oauth_client"
         private const val KV_OAUTH_TOKEN = "oauth_token"
         private const val KV_ACCOUNT_INFO = "account_info"
+        private const val KV_AUTH_SOURCE = "auth_source"
         private const val KV_SETTINGS = "mobile_settings"
     }
 
@@ -226,6 +227,30 @@ class MobileStateDb(context: Context) :
     }
 
     @Synchronized
+    fun clearCustomOAuthClient() {
+        deleteKv(KV_OAUTH_CLIENT)
+    }
+
+    @Synchronized
+    fun getOAuthClientStatusJson(): JSONObject {
+        val custom = getCustomOAuthClient()
+        val builtInId = BuildConfig.DEFAULT_GOOGLE_CLIENT_ID.trim()
+        val effective = getEffectiveOAuthClient()
+        val id = effective?.clientId.orEmpty()
+        val masked = when {
+            id.length > 22 -> id.take(12) + "…" + id.takeLast(14)
+            id.isNotBlank() -> id.take(6) + "…"
+            else -> ""
+        }
+        return JSONObject().apply {
+            put("hasEffectiveClient", effective != null)
+            put("hasCustomClient", custom != null && custom.clientId.isNotBlank())
+            put("hasEmbeddedClient", builtInId.isNotBlank())
+            put("maskedClientId", masked)
+        }
+    }
+
+    @Synchronized
     fun getToken(): StoredToken? {
         val raw = getKv(KV_OAUTH_TOKEN) ?: return null
         return runCatching {
@@ -262,6 +287,11 @@ class MobileStateDb(context: Context) :
     }
 
     @Synchronized
+    fun saveAuthSource(source: String) {
+        setKv(KV_AUTH_SOURCE, source.ifBlank { "oauth_pkce" })
+    }
+
+    @Synchronized
     fun getAccountInfo(): AccountInfo {
         val token = getToken()
         val effective = getEffectiveOAuthClient()
@@ -276,11 +306,12 @@ class MobileStateDb(context: Context) :
             }
         }
         val connected = token != null && (token.refreshToken.isNotBlank() || token.accessToken.isNotBlank())
+        val authSource = if (connected) (getKv(KV_AUTH_SOURCE)?.ifBlank { "oauth_pkce" } ?: "oauth_pkce") else "none"
         return AccountInfo(
             connected = connected,
             email = if (connected) email else "",
             displayName = if (connected) displayName else "",
-            authSource = if (connected) "oauth_pkce" else "none",
+            authSource = authSource,
             hasCustomOAuthClient = effective != null
         )
     }
@@ -289,6 +320,7 @@ class MobileStateDb(context: Context) :
     fun clearAccount() {
         deleteKv(KV_OAUTH_TOKEN)
         deleteKv(KV_ACCOUNT_INFO)
+        deleteKv(KV_AUTH_SOURCE)
     }
 
     @Synchronized

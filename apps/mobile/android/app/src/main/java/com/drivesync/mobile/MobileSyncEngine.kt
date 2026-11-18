@@ -57,39 +57,87 @@ class MobileSyncEngine(
         for (srcUri in uris) {
             val srcDoc = DocumentFile.fromSingleUri(context, srcUri) ?: continue
             val name = srcDoc.name ?: "arquivo-${System.currentTimeMillis()}"
-            val relPath = (baseSegments + name).joinToString("/")
-            val size = queryUriSize(srcUri, srcDoc.length())
-            if (SyncRules.exceedsUploadLimit(size)) {
-                skippedOver4Gb.add(name)
-                db.recordBlockedFile(
-                    folderId = folder.id,
-                    folderName = folder.name,
-                    relativePath = relPath,
-                    localPath = srcUri.toString(),
-                    fileSizeBytes = size,
-                    authorEmail = db.getAccountInfo().email,
-                    authorName = db.getAccountInfo().displayName,
-                    reason = "exceeds_4gb",
-                    detail = "Bloqueado na importação por exceder o limite fixo de 4 GB."
-                )
-                continue
+            if (copySafFileWithLimit(folder, rootDoc, baseSegments + name, srcDoc, skippedOver4Gb)) {
+                added++
             }
-            val mime = srcDoc.type ?: guessMime(name)
-            val dest = createOrReplaceFile(rootDoc, baseSegments + name, mime)
-                ?: throw IllegalStateException("Não foi possível gravar $name na pasta escolhida.")
-            context.contentResolver.openInputStream(srcUri)?.use { input ->
-                context.contentResolver.openOutputStream(dest.uri, "wt")?.use { out ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n <= 0) break
-                        out.write(buf, 0, n)
+        }
+        return added to skippedOver4Gb
+    }
+
+    fun importDirectoryTree(folderId: String, subpath: String, treeUri: Uri): Pair<Int, List<String>> {
+        val folder = db.getFolder(folderId) ?: throw IllegalArgumentException("Pasta não encontrada.")
+        val rootDoc = DocumentFile.fromTreeUri(context, Uri.parse(folder.localPath))
+            ?: throw IllegalStateException("Pasta local no celular inacessível. Selecione novamente.")
+        val srcRoot = DocumentFile.fromTreeUri(context, treeUri)
+            ?: throw IllegalStateException("Pasta de origem escolhida inacessível.")
+        val topName = srcRoot.name?.takeIf { it.isNotBlank() } ?: "Importado"
+        val baseSegments = sanitizeSubpathSegments(subpath) + topName
+        var added = 0
+        val skippedOver4Gb = mutableListOf<String>()
+
+        fun walkAndImport(dir: DocumentFile, currentSegments: List<String>) {
+            for (child in dir.listFiles()) {
+                val childName = child.name ?: continue
+                val rel = (currentSegments + childName).joinToString("/")
+                if (SyncRules.shouldIgnoreRelativePath(rel)) continue
+                if (child.isDirectory) {
+                    var targetDir = rootDoc
+                    for (seg in currentSegments + childName) {
+                        targetDir = findOrCreateChildDir(targetDir, seg)
+                            ?: throw IllegalStateException("Não foi possível criar subpasta $seg.")
+                    }
+                    walkAndImport(child, currentSegments + childName)
+                } else if (child.isFile) {
+                    if (copySafFileWithLimit(folder, rootDoc, currentSegments + childName, child, skippedOver4Gb)) {
+                        added++
                     }
                 }
             }
-            added++
         }
+
+        walkAndImport(srcRoot, baseSegments)
         return added to skippedOver4Gb
+    }
+
+    private fun copySafFileWithLimit(
+        folder: SyncFolderConfig,
+        rootDoc: DocumentFile,
+        destSegments: List<String>,
+        srcDoc: DocumentFile,
+        skippedOver4Gb: MutableList<String>
+    ): Boolean {
+        val name = destSegments.lastOrNull() ?: "arquivo"
+        val relPath = destSegments.joinToString("/")
+        val size = queryUriSize(srcDoc.uri, srcDoc.length())
+        if (SyncRules.exceedsUploadLimit(size)) {
+            skippedOver4Gb.add(relPath)
+            db.recordBlockedFile(
+                folderId = folder.id,
+                folderName = folder.name,
+                relativePath = relPath,
+                localPath = srcDoc.uri.toString(),
+                fileSizeBytes = size,
+                authorEmail = db.getAccountInfo().email,
+                authorName = db.getAccountInfo().displayName,
+                reason = "exceeds_4gb",
+                detail = "Bloqueado na importação por exceder o limite fixo de 4 GB."
+            )
+            return false
+        }
+        val mime = srcDoc.type ?: guessMime(name)
+        val dest = createOrReplaceFile(rootDoc, destSegments, mime)
+            ?: throw IllegalStateException("Não foi possível gravar $relPath na pasta escolhida.")
+        context.contentResolver.openInputStream(srcDoc.uri)?.use { input ->
+            context.contentResolver.openOutputStream(dest.uri, "wt")?.use { out ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n <= 0) break
+                    out.write(buf, 0, n)
+                }
+            }
+        }
+        return true
     }
 
     fun listFolderContents(folderId: String, subpath: String): JSONObject {
